@@ -12,66 +12,370 @@ import java.awt.image.*;
 import java.util.*;
 import javax.swing.Timer;		//import Timer specifically to avoid conflict with util Timer
 public class MainGame extends JFrame implements ActionListener {
-    Timer myTimer;
-    private int tickCount;		//counter that tracks how much time is left in milliseconds to defuse the bomb
-    BombPanel bomb;
+    private JButton playBut=new JButton("Select Level");				//buttons that bring user to level selection and instruction pages
+    private JButton infoBut=new JButton("Instructions");
 
-    /*----------------------------------------------------------------
-    Constructor which makes the window, the Bomb Object, and the Timer
-     ----------------------------------------------------------------*/
+    /*------------------------------------
+    Constructor which makes the main menu
+     ------------------------------------*/
     public MainGame() {
-        super("Main Game");
+        super("Main Menu");
         setSize(800,600);
-        myTimer=new Timer(10,this);
-        tickCount=11000;						//counts down, 1000 greater than desired number on screen, in this case, 30 sec
-        bomb=new BombPanel(3,tickCount);				//if numWires>5, add colours to allColours[][] line 188
-        add(bomb);
-
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-    }
+        playBut.addActionListener(this);
+        infoBut.addActionListener(this);
 
-    public void start(){
-        myTimer.start();
+        ImageIcon background=new ImageIcon("images/main menu back.png");		//change image later
+        JLabel menuBack=new JLabel(background);
+        JLayeredPane mainPage=new JLayeredPane();
+        mainPage.setLayout(null);
+
+        menuBack.setSize(900,750);						//adding the background image onto the menu page
+        menuBack.setLocation(-100,-300);
+        mainPage.add(menuBack,1);
+
+        playBut.setSize(155,60);						//setting size of play and instruction buttons and adding them to main menu
+        playBut.setLocation(355,300);
+		/*playBut.setContentAreaFilled(false);			//the buttons themselves don't need to be visible because the player can just click words such as "Play" on the background image
+		playBut.setFocusPainted(false);
+		playBut.setBorderPainted(false);*/
+
+        infoBut.setSize(155,60);
+        infoBut.setLocation(355,425);
+		/*infoBut.setContentAreaFilled(false);
+		infoBut.setFocusPainted(false);
+		infoBut.setBorderPainted(false);*/
+
+        mainPage.add(playBut,2);
+        mainPage.add(infoBut,2);
+        add(mainPage);
         setVisible(true);
     }
-    public void makeMainMenu(){
-        MainGame game=new MainGame();
-        new MainMenu(game);
+    /*-----------------------------------------------------
+     *this method changes the frame when a button is clicked
+     *-----------------------------------------------------*/
+    public void actionPerformed(ActionEvent evt) {
+        Object source=evt.getSource();
+        if(source==playBut){				//when play button is clicked, the main menu is no longer visible and the level selection frame is shown
+            setVisible(false);
+            SelectLevelPage page=new SelectLevelPage(0);
+            page.start();
+        }
+        else if(source==infoBut){			//when instructions button is clicked, instructions page is shown
+            setVisible(false);
+            new InstructionsPage();
+        }
     }
-    /*-----------------------------------------------------------------
-    Updates the game whenever Timer fires and ends game when time is up
-     ----------------------------------------------------------------*/
+    public static void main(String[]args){
+        MainGame main=new MainGame();
+    }
+}
+/*-----------------------------------------------------------------------------------------------
+ *The frame where players select a level to play uses card layout.
+ *Each level is a page in a book. Each page is BookPage Object that has a JPanel as an attribute.
+ *This class is created in the main class, when user clicks the "Select Level" button.
+ *----------------------------------------------------------------------------------------------*/
+class SelectLevelPage extends JFrame implements ActionListener{
+    private JPanel completeBook;							//JPanel that stores all the other panels
+    private CardLayout cLayout;
+    private BookPage[] pages;								//The Objects that represent the pages of the book. This is used to update the displayed panel when a button is clicked
+    private BookPage currentPage;							//The current page being shown. This is used to update the panel's interface.
+    private Timer myTimer;
+    private JButton returnBut;								//A button that brings user back to main menu. This is a field because it has its own if statement in actionPerfomed()
+    private JButton playBut;
+    private JButton[] levelBut;								//Array that stores the next/previous buttons to flip between pages
+    private int level;
+
+    /*-----------------------------------------------------------------------------------------
+     *Constructor which makes the card layout, buttons, and BookPage Objects
+     *"displayedLevel" is an index of levelBut and pages. It controls which level page is shown.
+     *-----------------------------------------------------------------------------------------*/
+    public SelectLevelPage(int displayedLevel){
+        super("Select Level");									//the following lines are just assigning values to the fields and creating the frame
+        setSize(800,600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
+        cLayout=new CardLayout();
+        level=displayedLevel;
+        completeBook=new JPanel(cLayout);
+        pages=new BookPage[10];
+        myTimer=new Timer(10,this);
+        levelBut=new JButton[10];
+
+        returnBut=new JButton("Main menu");
+        returnBut.addActionListener(this);
+        returnBut.setSize(200,50);							//the size and location of the return button is constant for all pages, whereas the buttons for the levels change location depending on the current page
+        returnBut.setLocation(300,510);						//since these remain constant, they're declared here
+
+        playBut=new JButton("Play");
+        playBut.addActionListener(this);
+        playBut.setSize(200,50);
+        playBut.setLocation(300,0);
+
+        for(int i=0;i<10;i++){								//creating a page for each level and 10 buttons that bring the player to specific level pages
+            JButton newButton=new JButton("Level "+(i+1));
+            newButton.addActionListener(this);
+            newButton.setSize(200,50);						//the size of all buttons remains constant
+            levelBut[i]=newButton;
+
+            BookPage newPage=new BookPage(i+1);
+            pages[i]=newPage;
+            completeBook.add(newPage,(i+1)+"");	//the JPanel attribute of the BookPage Object is added to the master JPanel
+        }
+
+        currentPage=pages[displayedLevel];		//displaying the page indicated by the constructor's parameter
+        if(displayedLevel==0){
+            currentPage.addButtons(null,levelBut[1],returnBut,playBut);
+        }
+        else if(displayedLevel==9){
+            currentPage.addButtons(levelBut[8],null,returnBut,playBut);
+        }
+        else{
+            currentPage.addButtons(levelBut[displayedLevel-1],levelBut[displayedLevel+1],returnBut,playBut);
+        }
+
+        getContentPane().add(completeBook);
+        cLayout.show(completeBook,(displayedLevel+1)+"");
+        currentPage=pages[displayedLevel];
+        setVisible(true);
+    }
+    /*--------------------------------------------------------------------------------------
+     *This method starts the timer, causing the interface to be updated in actionPerformed()
+     *-------------------------------------------------------------------------------------*/
+    public void start(){
+        myTimer.start();
+    }
+    /*-----------------------------------------------------------------------------
+     *This method changes the page that's shown whenever the player clicks a button
+     *----------------------------------------------------------------------------*/
     public void actionPerformed(ActionEvent e){
         Object source=e.getSource();
-        if(bomb!=null && source==myTimer){			//updating the game
+        if(source==returnBut){				//the main menu is shown if the return to main menu button is clicked
+            setVisible(false);
+            new MainGame();
+        }
+        if(source==playBut){
+            setVisible(false);
+            GameFrame actualGame=new GameFrame(currentPage.getBomb(),level);
+            actualGame.start();
+        }
+        if(source==myTimer){
+            currentPage.repaint();
+        }
+        else{								//Detecting which level button was clicked and showing the corresponding level page
+            for(int i=0;i<10;i++){
+                if(source==levelBut[i]){											//From testing, it was found that buttons occasionnally disappear from panels when clicking back and forth.
+                    if(i==0){														//Therefore, all the buttons must be added whenever a new page is displayed
+                        pages[i].addButtons(null,levelBut[1],returnBut,playBut);	//the first page is unique because it has no previous button; similarly, the last page lacks a next button
+                    }
+                    else if(i==9){
+                        pages[i].addButtons(levelBut[8],null,returnBut,playBut);
+                    }
+                    else{
+                        pages[i].addButtons(levelBut[i-1],levelBut[i+1],returnBut,playBut);
+                    }
+                    currentPage=pages[i];
+                    cLayout.show(completeBook,(i+1)+"");
+                }
+            }
+        }
+    }
+}
+/*---------------------------------------------------------------------------------------------------------------------------------
+ *This class makes a page of the book where players select a level to play. The 10 pages are created in SelectLevelPage constructor.
+ *Custom Objects are required because every page has different buttons. These Objects faciliate the process of adding unique buttons.
+ *---------------------------------------------------------------------------------------------------------------------------------*/
+class BookPage extends JPanel{
+    private int pageNum;				//the level that the page represents (1 to 10)
+    private JPanel thisPanel;			//variable that represents this JPanel. Used for clarity so we don't keep typing "this"
+    private BombPanel bomb;             //the bomb that's played for a specific level
+
+    /*----------------------------------------------------------
+     *Constructor where "level" is the level the page represents
+     *----------------------------------------------------------*/
+    public BookPage(int level){
+        pageNum=level;
+        thisPanel=this;
+        thisPanel.setLayout(null);                           //allows us to add buttons wherever we want
+        bomb=new BombPanel(3,11000);        //make a bomb, possibly pass in array of Bombs as argument
+    }
+    /*----------------------------------------------------------------------
+    This method returns the bomb that belongs to a certain level.
+    Used to create GameFrame once play button is clicked in SelectLevelPage
+     ----------------------------------------------------------------------*/
+    public BombPanel getBomb(){
+        return bomb;
+    }
+    /*---------------------------------------------------------------------------------------------------------------------
+     *This method adds specific buttons to the page
+     *"prev" goes back a level, "next" advances a level,"returnBut" returns player to main menu, "playBut" starts the game
+     *Called in SelectLevelPage actionPerformed() whenever the displayed panel changes
+     *--------------------------------------------------------------------------------------------------------------------*/
+    public void addButtons(JButton prev,JButton next,JButton returnBut,JButton playBut){
+        if(!thisPanel.isAncestorOf(returnBut)){			//the buttons are added only if the JPanel doesn't already have the button
+            thisPanel.add(returnBut);                   //Credit goes to Zulaikha, who told Keith he has to check if the panel already has a button
+        }
+        if(!thisPanel.isAncestorOf(playBut)){
+            thisPanel.add(playBut);
+        }
+        if(prev!=null){									//the first level page lacks a previous button, so this avoids a null pointer exception
+            if(!thisPanel.isAncestorOf(prev)){
+                prev.setLocation(0,510);
+                thisPanel.add(prev);
+            }
+        }
+        if(next!=null){									//the last level page lacks a next button
+            if(!thisPanel.isAncestorOf(next)){
+                next.setLocation(600,510);
+                thisPanel.add(next);
+            }
+        }
+    }
+    /*-----------------------------------------------------------------------------------------------------------------
+     *This method is used to display specific information about the bomb for a level
+     *Since bombs are randomly created every time the program is run, we need a general method of displaying information,
+     *rather than blitting a picture that contains information about the bomb on each page of the book.
+     *----------------------------------------------------------------------------------------------------------------*/
+    @Override
+    public void paintComponent(Graphics g){
+        g.setColor(new Color(255,255,255));			//make the bombs in main class. Pass around array of bombs as parameter in constructors.
+        //get info about the bombs and display the info here
+        g.fillRect(0,0,getWidth(),getHeight());
+        g.setFont(new Font("Arial",Font.PLAIN,50));			//displaying time
+        g.setColor(new Color(0,0,0));
+        g.drawString(pageNum+"",375,150);
+    }
+}
+/*----------------------------------------------------------------
+This class controls the gameplay by displaying and updating a bomb
+ -----------------------------------------------------------------*/
+class GameFrame extends JFrame implements ActionListener{
+    private Timer myTimer;                      //controls when the bomb is updated
+    private int tickCount,levelIndex;
+    private BombPanel bomb;
+
+    /*--------------------------------------------------------------
+    Constructor which makes the frame
+    "thisBomb" is the bomb that belongs to the level being played
+    "index" is an index of BookPages. index+1 is the level (1 to 10)
+     ---------------------------------------------------------------*/
+    public GameFrame(BombPanel thisBomb, int index){
+        super("Game Screen");
+        System.out.println(index);
+        setSize(800,600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
+        myTimer=new Timer(10,this);
+        tickCount=11000;
+        bomb=thisBomb;
+        add(bomb);
+        levelIndex=index;
+        setVisible(true);
+    }
+    public void start(){
+        myTimer.start();
+    }
+    public void actionPerformed(ActionEvent evt){
+        Object source=evt.getSource();
+        if(source==myTimer){
             tickCount-=10;
             bomb.updateState();
             bomb.repaint();
         }
-        if(tickCount==0){							//stop game when time is up
+        if(tickCount==0){
             myTimer.stop();
-            tickCount=0;
-            System.out.println("done");
+            new GameOverFrame(bomb,levelIndex);
         }
     }
+}
+/*----------------------------------------------------------
+This class makes a frame after user completes a level
+From this frame, user can play again or return to main menu
+ ----------------------------------------------------------*/
+class GameOverFrame extends JFrame implements ActionListener{
+    private BombPanel bomb;
+    private int levelIndex;
+    private JButton returnBut,playAgainBut;     //buttons that allow user to return to main menu or play again
 
-    public static void main(String[]args){
-        MainGame main=new MainGame();
-        main.makeMainMenu();
+    /*---------------------------------------------------------------------------------------------------------------
+    Constructor that makes the frame.
+    "justPlayed" is the bomb that was completed, necessary because it's used to recreate the bomb if user plays again
+    "level" is the level that was just played, necessary to recreate the bomb
+     ----------------------------------------------------------------------------------------------------------------*/
+    public GameOverFrame(BombPanel justPlayed,int level){	//add score argument
+        super("Game Over");
+        setSize(800,600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
+
+        returnBut=new JButton("Main menu");
+        playAgainBut=new JButton("Play again");
+        returnBut.addActionListener(this);
+        playAgainBut.addActionListener(this);
+        bomb=justPlayed;
+        //ImageIcon background=new ImageIcon("Simple game images/game over back.png");
+        //JLabel back=new JLabel(background);
+        JLabel scoreLabel=new JLabel("Final Score: 01:30");			//displays final score
+        JLayeredPane thisPage=new JLayeredPane();
+        thisPage.setLayout(null);
+
+        //back.setSize(800,600);
+        //back.setLocation(0,0);
+        scoreLabel.setSize(500,50);
+        scoreLabel.setFont(new Font("Arial",Font.PLAIN,40));
+        //scoreLabel.setForeground(new Color(185,122,85));
+        scoreLabel.setLocation(325,100);
+        thisPage.add(scoreLabel,1);
+        //thisPage.add(back,1);
+
+        playAgainBut.setSize(250,100);
+        playAgainBut.setLocation(0,0);
+        //playAgainBut.setContentAreaFilled(false);
+        //playAgainBut.setFocusPainted(false);
+        //playAgainBut.setBorderPainted(false);
+
+        returnBut.setSize(250,100);
+        returnBut.setLocation(0,300);
+        //returnBut.setContentAreaFilled(false);
+        //returnBut.setFocusPainted(false);
+        //returnBut.setBorderPainted(false);
+
+        thisPage.add(returnBut,2);
+        thisPage.add(playAgainBut,2);
+        add(thisPage);
+        setVisible(true);
+    }
+    /*-------------------------------------------------------------------
+     This method changes frames when a button is pressed
+     When the game is over, you can either go to main menu or play again.
+     *-------------------------------------------------------------------*/
+    public void actionPerformed(ActionEvent evt){
+        Object source=evt.getSource();
+        if(source==returnBut){
+            setVisible(false);
+            new MainGame();
+        }
+        if(source==playAgainBut){               //a new game is started when player clicks play again
+            setVisible(false);
+            bomb.reset();
+            GameFrame actualGame=new GameFrame(bomb,levelIndex);
+            actualGame.start();
+        }
     }
 }
 /*--------------------------------------------------------------------------------------------------
  *This class makes the JPanel that's the game screen. It contains a  bomb with modules as attributes
  *-------------------------------------------------------------------------------------------------*/
 class BombPanel extends JPanel implements MouseListener{
-    private int mouseX,mouseY;					//coordinates of mouse
-    private TimeModule timer;
-    private WireModule wires;
+    private int mouseX,mouseY;          //coordinates of mouse
+    private TimeModule timer;           //a countdown
+    private WireModule wires;           //the wires puzzle
 
     /*--------------------------------------------------------
     Constructor which makes a timer and wire module.
     "numWires" specifies how many wires are in the wire module.
+    "timeLeft" is the time the player has to complete the level
      ---------------------------------------------------------*/
     public BombPanel(int numWires, int timeLeft){
         addMouseListener(this);
@@ -86,10 +390,16 @@ class BombPanel extends JPanel implements MouseListener{
         }
         wires=new WireModule(wireYCoord,numWires);					//creating a wire module
     }
-
-    /*-----------------------------------------------------------------
-    This method updates the game whenever the Timer fires in main class
-     -----------------------------------------------------------------*/
+    /*--------------------------------------------------------
+    This method is called whenever player clicks "Play again"
+    It resets all the modules so the level can be played again
+     --------------------------------------------------------*/
+    public void reset(){
+        timer.resetTime();
+    }
+    /*----------------------------------------------------------------------
+    This method updates the game whenever the Timer fires in GameFrame class
+     ----------------------------------------------------------------------*/
     public void updateState(){
         timer.subtractTime();						//displaying a count down
         for(Rectangle rect:wires.getWires()){		//checks if user clicks on wire
@@ -99,9 +409,9 @@ class BombPanel extends JPanel implements MouseListener{
         }
     }
 
-    /*------------------------------------------------------------
-    Draws the bomb on screen, called at same time as updateState()
-     ------------------------------------------------------------*/
+    /*-------------------------------------------------------------------------
+    Draws the bomb on screen, called at same time as updateState() in GameFrame
+     --------------------------------------------------------------------------*/
     @Override
     public void paintComponent(Graphics g){
         g.setColor(new Color(255,255,255));
@@ -141,17 +451,22 @@ class BombPanel extends JPanel implements MouseListener{
  This class makes a countdown for a Bomb Object
  --------------------------------------------*/
 class TimeModule{
-    private int x,y,time;		//time is in milliseconds, x and y are where the module is displayed
-
+    private int x,y,time,originalTime;		//time is in milliseconds, x and y are where the module is displayed
+                                            //originalTime is how much time is assigned to the level
     /*----------------------------------------
     Constructor, module is made in Bomb class
      ----------------------------------------*/
     public TimeModule(int xCoord, int yCoord, int timeLeft){
         x=xCoord;
         y=yCoord;
-        time=timeLeft;
+        time=originalTime=timeLeft;
     }
-
+    /*-------------------------------------------------------------------------
+    This method allows players to play a level again by resetting the countdown
+     -------------------------------------------------------------------------*/
+    public void resetTime(){
+        time=originalTime;
+    }
     /*------------------------------------------------------------------------
      Responsible for the countdown because it alters the time that's displayed
      -------------------------------------------------------------------------*/
@@ -246,86 +561,20 @@ class WireModule{
         return numWires;
     }
 }
-/*-----------------------------------------------------
- *this class makes a frame for the main menu
- *implements ActionListener because user clicks buttons
- *------------------------------------------------------*/
-class MainMenu extends JFrame implements ActionListener{
-    private MainGame mainGame;							//the SimpleGame Object is used to start the Timer for the game when the player hits "Play"
-    private JButton playBut=new JButton("Play");				//buttons that bring user to the game and instructions pages
-    private JButton infoBut=new JButton("Instructions");
-
-    /*--------------------------------------------------------------------
-     *constructor method which makes buttons and a background for the frame
-     *"g" is a SimpleGame Object
-     *-------------------------------------------------------------------*/
-    public MainMenu(MainGame g){
-        super("Main Menu");								//setting size and calling to super class constructor because the main menu is its own frame
-        setSize(900,750);
-        mainGame=g;
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setResizable(false);
-        playBut.addActionListener(this);
-        infoBut.addActionListener(this);
-
-        ImageIcon background=new ImageIcon("images/main menu back.png");		//change image later
-        JLabel menuBack=new JLabel(background);
-        JLayeredPane mainPage=new JLayeredPane();
-        mainPage.setLayout(null);												//this allows me to add labels where I want
-
-        menuBack.setSize(900,750);						//adding the background image onto the menu page
-        menuBack.setLocation(0,0);
-        mainPage.add(menuBack,1);
-
-        playBut.setSize(155,60);						//setting size of play and instruction buttons and adding them to main menu
-        playBut.setLocation(355,300);
-		/*playBut.setContentAreaFilled(false);						//the buttons themselves don't need to be visible because the player can just click words such as "Play" on the background image
-		playBut.setFocusPainted(false);
-		playBut.setBorderPainted(false);*/
-
-        infoBut.setSize(155,60);
-        infoBut.setLocation(355,425);
-		/*infoBut.setContentAreaFilled(false);
-		infoBut.setFocusPainted(false);
-		infoBut.setBorderPainted(false);*/
-
-        mainPage.add(playBut,2);
-        mainPage.add(infoBut,2);
-        add(mainPage);
-        setVisible(true);
-    }
-    /*-----------------------------------------------------
-     *this method changes the frame when a button is clicked
-     *-----------------------------------------------------*/
-    public void actionPerformed(ActionEvent evt) {
-        Object source=evt.getSource();
-        if(source==playBut){				//when play button is clicked, the main menu is no longer visible and the Timer for the game start
-            setVisible(false);
-            //mainGame.startMusic();
-            mainGame.start();
-        }
-        else if(source==infoBut){			//when instructions button is clicked, instructions page is shown
-            setVisible(false);
-            new InstructionsPage(mainGame);
-        }
-    }
-}
 /*---------------------------------------------------------------------------------
  *this class makes a frame for an instructions page
  *implements ActionListener because there's a button that returns user to main menu
  *---------------------------------------------------------------------------------*/
 class InstructionsPage extends JFrame implements ActionListener{
-    private MainGame mainGame;						//The constructor for the main menu has a SimpleGame Object as a parameter, so when the return button is clicked on this frame, MainMenu() has to be called with a SimpleGame Object
     private JButton returnBut=new JButton("Main menu");		//button used to return to main menu
 
     /*---------------------------------------------------------------------
      *constructor method which makes buttons and a background for the frame
      *"g" is a SimpleGame Object
      *-------------------------------------------------------------------*/
-    public InstructionsPage(MainGame g){
+    public InstructionsPage(){
         super("Instructions");
-        setSize(900,750);
-        mainGame=g;
+        setSize(800,600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         returnBut.addActionListener(this);
@@ -335,12 +584,12 @@ class InstructionsPage extends JFrame implements ActionListener{
         JLayeredPane infoPage=new JLayeredPane();
         infoPage.setLayout(null);
 
-        infoBack.setSize(900,700);
+        infoBack.setSize(800,600);
         infoBack.setLocation(0,0);
         infoPage.add(infoBack,1);
 
-        returnBut.setSize(250,55);						//creating a "return to main menu" button and adding it to infoPage
-        returnBut.setLocation(0,640);
+        returnBut.setSize(150,55);						//creating a "return to main menu" button and adding it to infoPage
+        returnBut.setLocation(0,500);
 		/*returnBut.setContentAreaFilled(false);
 		returnBut.setFocusPainted(false);
 		returnBut.setBorderPainted(false);*/
@@ -356,7 +605,7 @@ class InstructionsPage extends JFrame implements ActionListener{
         Object source=evt.getSource();
         if(source==returnBut){
             setVisible(false);
-            mainGame.makeMainMenu();
+            new MainGame();
         }
     }
 }
