@@ -124,7 +124,7 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
     public void mouseReleased(MouseEvent e){}
     public void mousePressed(MouseEvent e){}
 
-    public static void main(String[]args){
+    public static void main(String[]args){                  //create random array of integers, pass that into Bomb constructor because it'll make the specific modules from there
         int[] moduleTypes=new int[1];
         Bomb[] allBombs=new Bomb[10];
         Modules wireTest=new Modules(2,100,100);
@@ -425,28 +425,33 @@ class GameFrame extends JFrame implements ActionListener{
         }
     }
 }
+/*-------------------------------------------------------------------------------------------
+This class creates a generic module which is then assigned a specific module
+It tells modules when to draw themselves, and determines when player has clicked on a module
+ -------------------------------------------------------------------------------------------*/
 class Modules {
-    public final int BUTTON=1; //Use the names instead of numbers since its more conventional for making bombs
+    public final int BUTTON=1;          //Use the names instead of numbers since its more conventional for making bombs
     public final int WIRES=2;
     public final int SYMBOLS=3;
     public final int SIMON=4;
-    //Not gonna make the timer a module since it should always be on the bomb no matter what
-    private Rectangle mod;
-    private int type,x,y;
-    private boolean defused,isFocused;
-    private Button click;
+
+    private Rectangle mod;                  //the module's hitbox
+    private int type,x,y;                   //type is one of the constants which indicate the type of module. x and y are coordinates of the hitbox
+    private boolean defused,isFocused;      //defused indicates if this module has been solved or not, isFocused indicates if user has clicked a particular module
+    private Button click;                   //only one of these is assigned a value, the rest are null
     private WireModule cut;
     //private Symbols press;
     //private Simon pattern;
-    /*-----------------------------------------------------------------------------------------------------
-    *Constructor for making the module
-    *We need a "type" to distinguish what kind of module we're using along with the coordinates of the module
-    *No return
-    --------------------------------------------------------------------------------------------------------*/
+    /*------------------------------------------------------------------------
+    Constructor for making the module
+    "modType" indicates what time of module is made based on the constants
+    "x" and "y" are the coordinates of where the module box is
+    --------------------------------------------------------------------------*/
     public Modules(int modType,int x,int y){
+        System.out.println(x+" "+y);
         type=modType;
         /*if(type==1){
-            click=new Button();
+            click=new Button();             //add arguments to constructors if necessary
         }*/
         if(type==WIRES){
             cut=new WireModule(x,y);
@@ -461,55 +466,56 @@ class Modules {
         this.y=y;
         mod=new Rectangle(x,y,200,200);
         isFocused=false;
+        defused=false;
     }
+    /*----------------------------------------------------------------------------------------------
+    This calls the interaction methods of each module, enabling gameplay.
+    For example, checking if correct wires were cut, or if Simon says pattern was repeated correctly
+     ----------------------------------------------------------------------------------------------*/
     public void startInteraction(){
-        if(type==WIRES){
+        if(type==WIRES){                    //this is where you create anything that needs to be passed in as an argument in the modules' interact()
             int[] sampleArray={1,2,3};
             cut.interact(sampleArray);
         }
     }
-    /*----------------------------------------------------------------------------------
-    *When you click or select the module to "play" it. Can't be played if it's defused
-    *Returns a boolean that can tell the game whether they've made a mistake or not
+    /*---------------------------------------------------------------------------------
+    This method checks if a module can be played.
+    Called whenever user clicks on the JPanel which contains the bomb
+    Returns a boolean that tells the game whether or not the module is already defused
     ----------------------------------------------------------------------------------*/
-    public boolean play(int mouseX,int mouseY){
-        if(mod.contains(mouseX,mouseY)) {//We check if its the same rectangle as a sort of confirmation
-            isFocused = true; //We focus on that module
+    public boolean alreadyDefused(int mouseX,int mouseY){
+        if(mod.contains(mouseX,mouseY)) {           //checking if the user clicked on a module or empty space
+            isFocused = true;                       //this enables interaction with the module
             return defused;
         }
         return false;
     }
-    public int getType(){
-        return type;
-    }
+    /*---------------------------------------------------------------------
+    This method outlines the module box if it's currently focused
+    Calls the draw methods of each module. The modules then draw themselves
+     ---------------------------------------------------------------------*/
     public void draw(Graphics g){
         if(isFocused){
             g.setColor(Color.GREEN);
-            g.drawRect((int)mod.getX(),(int)mod.getY(),(int)mod.getWidth(),(int)mod.getHeight());
         }
+        else{
+            g.setColor(Color.BLACK);
+        }
+        g.drawRect((int)mod.getX(),(int)mod.getY(),(int)mod.getWidth(),(int)mod.getHeight());
         if(type==WIRES){
             cut.draw(g);
         }
     }
-    /*---------------------------------
-    *Checks if the module has been "solved" or defused
-    *No parameters
-    *No return although it will set the module to either have been defused or not
-    -----------------------------------*/
-    public void checkDefused(){
-        /*if(type==1){
-            defused=click.isdefused();
-        }*/
-        if(type==WIRES) {
-            defused=cut.isDefused();
-        }
-        /*if(type==3){
-            defused=press.isdefused();
-        }
-        if(type==4){
-            defused=pattern.isdefused();
-        }*/
+    /*----------------------------------------------
+    This method returns the type of module this is
+    Used by
+    ----------------------------------------------------*/
+    public int getType(){
+        return type;
     }
+    /*------------------------------------------------------------------------------------
+    This method changes the isFocused value, meaning user isn't interacting with this box
+     ------------------------------------------------------------------------------------*/
     public void setUnfocused(){
         isFocused=false;
     }
@@ -586,9 +592,7 @@ class Bomb extends JPanel implements MouseListener{
         for(Modules[] mod:minigames){
             Modules facingMod=mod[face];
             if(facingMod!=null) {
-                System.out.println(facingMod.play(mouseX,mouseY));
-                if (facingMod.play(mouseX, mouseY)) {          //user has clicked on a module
-
+                if (!facingMod.alreadyDefused(mouseX, mouseY)) {          //user has clicked on a module
                     facingMod.startInteraction();
                 }
                 else {
@@ -611,7 +615,6 @@ class WireModule{
     private int[] codes;
     private int numWires;
     private int allottedTime;
-    private boolean defused;
     /*--------------------------------------------------------------------------------------------
     Constructor which creates a specified number of Rectangles and rgb values that represent wires
     "coord" is a list of y coordinates that paintComponent uses to draw the wires.
@@ -619,7 +622,6 @@ class WireModule{
      -------------------------------------------------------------------------------------------*/
     public WireModule(int startX,int startY){
         Random rand=new Random();
-        defused=false;
         numWires=2+rand.nextInt(3);
         allottedTime=10000*numWires;
         colours=new int[numWires][3];	    //possible wire colours: red, blue, green, yellow, black
@@ -648,9 +650,6 @@ class WireModule{
             Rectangle wire=wires[i];
             g.fillRect((int)wire.getX(),(int)wire.getY(),(int)wire.getWidth(),(int)wire.getHeight());
         }
-    }
-    public boolean isDefused(){
-        return defused;
     }
     /*
     Work in progress, ignore this method for now.
