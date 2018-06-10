@@ -129,7 +129,7 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
         Bomb[] allBombs=new Bomb[10];
         Modules wireTest=new Modules(2,100,100);
         moduleTypes[0]=wireTest.getType();
-        allBombs[0]=new Bomb("",0,1,moduleTypes);
+        allBombs[0]=new Bomb("",0,moduleTypes);
         SelectLevelPage selectPage=new SelectLevelPage(0,allBombs);
         new MainGame(selectPage);
     }
@@ -419,36 +419,154 @@ class GameFrame extends JFrame implements ActionListener{
             bomb.updateState();
             bomb.repaint();
         }
-        if(tickCount==0){
+        if(tickCount==0 || bomb.getStrikes()==3){                   //game ends if time runs out, or player makes 3 mistakes
             myTimer.stop();
             new GameOverFrame(bomb,levelIndex,selectLevel);
         }
     }
 }
-/*-------------------------------------------------------------------------------------------
-This class creates a generic module which is then assigned a specific module
-It tells modules when to draw themselves, and determines when player has clicked on a module
- -------------------------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------------------------------
+This class makes a bomb Object that has an Array of modules as an attribute
+The Bomb detects when the player clicks on a module, and then tells the module to handle interactions
+The Bomb also tells all its modules to draw themselves using methods in Modules class
+ ----------------------------------------------------------------------------------------------------*/
+class Bomb extends JPanel implements MouseListener{
+    private String serial;                  //Serial code used for more complex defusing rules
+    private int numBat;                     //number of batteries for same purpose as above
+    private int numMod;                     //the number of modules on this bomb
+    private Modules[][] minigames;          //2D Array that contains the modules located on front and back of the Bomb
+    private int face;                       //Controls which side of the Bomb is shown. 0 for the front, 1 for the back.
+    private int mouseX,mouseY,strikes;      //mouseX and mouseY are the mouse coordinates. strikes is how many mistakes the player has made. The game ends if strikes==3
+    private Modules currentInteract;        //the module that is being interacted with right now
+
+    /*-----------------------------------------------------------------------------------------------------
+    This is the constructor of the bomb
+    "serial" is a serial code, "bat" is number of batteries
+    "modTypes" contains numbers from 1-4 that're interpreted as constants when a Modules Object is created
+    ------------------------------------------------------------------------------------------------------*/
+    public Bomb(String serialCode,int bat,int[] modTypes){
+        addMouseListener(this);
+        serial=serialCode;
+        numBat=bat;
+        numMod=modTypes.length;
+        face=strikes=0;                                                                   //the front of the bomb is shown by default
+        int[][] cornerCoord={{100,100},{100,300},{300,100},{500,100},{500,300}};          //each module box is drawn as a rectangle, so these are the rectangles' coordinates
+
+        if(numMod>5){                                           //If there are more than 5 modules including the countdown
+            minigames=new Modules[6][2];                        //Each element has two spots: the first one contains a module on the front of the bomb, the second one is for the back
+        }
+        else {
+            minigames = new Modules[6][1];
+        }
+        for(int i=0;i<numMod;i++) {                             //assigning modules to the new 2D Array
+            if (i<=5) {
+                minigames[i][0] = new Modules(modTypes[i],cornerCoord[i][0],cornerCoord[i][1]);
+            }
+            else {                                              //the front of the bomb only has room for 5 modules, so we go back and start adding modules to the back
+                minigames[i - 5][1] = new Modules(modTypes[i],cornerCoord[i-5][0],cornerCoord[i-5][1]);
+            }
+        }
+    }
+    /*----------------------------------------------------------------------------------------------------------
+    This method is used by GameFrame to see how many mistakes the player has made and end the game if strikes==3
+    -----------------------------------------------------------------------------------------------------------*/
+    public int getStrikes(){
+        return strikes;
+    }
+    /*-----------------------------------------------------------------------------------------
+    This method changes the displayed side of the bomb when flip button is clicked in GameFrame.
+    Changing "face" will change the modules that're drawn
+    ------------------------------------------------------------------------------------------*/
+    public void changeFace(){
+        face=1-face;                    //if face is currently 0, it must change to 1 and vice versa
+    }
+    /*----------------------------------------------------------------------
+    This method updates the Bomb whenever the Timer fires in GameFrame class
+     ----------------------------------------------------------------------*/
+    public void updateState(){
+    }
+    /*---------------------------------------------------------------------------------------------------------
+    This method draws a 3 x 2 grid that represents the bomb. It also tells all the modules to draw themselves.
+    This is called whenever the Timer fires in GameFrame
+    ----------------------------------------------------------------------------------------------------------*/
+    @Override
+    public void paintComponent(Graphics g){
+        g.setColor(new Color(255,255,255));
+        g.fillRect(0,0,getWidth(),getHeight());		//clearing the screen in preparation for new drawings
+        g.setColor(new Color(0,0,0));
+
+        for(int i=100;i<800;i+=200){						//drawing a 3 x 2 grid to represent the bomb
+            g.drawLine(i,100,i,500);
+        }
+        for(int i=100;i<600;i+=200){
+            g.drawLine(100,i,700,i);
+        }
+
+        for(Modules[] mod:minigames){                       //drawing the modules on the current face
+            Modules facingMod=mod[face];
+            if(facingMod!=null) {
+                facingMod.draw(g);
+            }
+        }
+    }
+    /*------------------------------------------------------------------------------------------------------
+    This method verifies if the user wants to interact with a module, or if they just clicked on empty space
+    It also checks if the user is defusing a module correctly
+    -------------------------------------------------------------------------------------------------------*/
+    public void mousePressed(MouseEvent e){
+        mouseX=e.getX();
+        mouseY=e.getY();
+        for(Modules[] mod:minigames){
+            Modules facingMod=mod[face];
+            if(facingMod!=null) {                                         //remove this line once all bombs have been made
+                if (!facingMod.alreadyDefused(mouseX, mouseY)) {          //user has clicked on a module that has not been defused
+                    currentInteract=facingMod;
+                    facingMod.startInteraction();                         //this enables the actual gameplay with the module
+                }
+                else {
+                    facingMod.setUnfocused();
+                }
+            }
+        }
+        if(currentInteract!=null) {
+            if (!currentInteract.correctPlayerAction()) {                  //this can't be called in updateState() because "strikes" would increase every 10 milliseconds, ending the game instantly
+                strikes++;
+            }
+        }
+    }
+    /*--------------------------------------------------------------------
+    The following method must be implemented in order to use MouseListener
+     --------------------------------------------------------------------*/
+    public void mouseEntered(MouseEvent e){}
+    public void mouseExited(MouseEvent e){}
+    public void mouseClicked(MouseEvent e){}
+    public void mouseReleased(MouseEvent e){}
+}
+/*-------------------------------------------------------------------------------------------------------
+This class creates a generic module which is then assigned a specific module, such as wires or simon says
+It tells modules to draw themselves and determines when player has clicked on a module
+ -------------------------------------------------------------------------------------------------------*/
 class Modules {
-    public final int BUTTON=1;          //Use the names instead of numbers since its more conventional for making bombs
+    public final int BUTTON=1;               //Constants for clarity when dealing with modules
     public final int WIRES=2;
     public final int SYMBOLS=3;
     public final int SIMON=4;
 
     private Rectangle mod;                  //the module's hitbox
     private int type,x,y;                   //type is one of the constants which indicate the type of module. x and y are coordinates of the hitbox
-    private boolean defused,isFocused;      //defused indicates if this module has been solved or not, isFocused indicates if user has clicked a particular module
+    private boolean defused,isFocused;      //defused indicates if this module has been solved or not. isFocused indicates if user has clicked a particular module
+    private boolean correctAction;          //this verifies if the user is playing the module correctly
+    private int mouseX,mouseY;
     private Button click;                   //only one of these is assigned a value, the rest are null
     private WireModule cut;
     //private Symbols press;
     //private Simon pattern;
-    /*------------------------------------------------------------------------
-    Constructor for making the module
-    "modType" indicates what time of module is made based on the constants
-    "x" and "y" are the coordinates of where the module box is
-    --------------------------------------------------------------------------*/
+    /*--------------------------------------------------------------------
+    Constructor that makes the module
+    "modType" indicates what type of module is made based on the constants
+    "x" and "y" are the coordinates of where the module hitbox is
+    ---------------------------------------------------------------------*/
     public Modules(int modType,int x,int y){
-        System.out.println(x+" "+y);
         type=modType;
         /*if(type==1){
             click=new Button();             //add arguments to constructors if necessary
@@ -465,51 +583,20 @@ class Modules {
         this.x=x;
         this.y=y;
         mod=new Rectangle(x,y,200,200);
-        isFocused=false;
+        isFocused=false;                                //by default, the module has not been defused yet and it hasn't been clicked on
         defused=false;
+        correctAction=true;
     }
-    /*----------------------------------------------------------------------------------------------
-    This calls the interaction methods of each module, enabling gameplay.
-    For example, checking if correct wires were cut, or if Simon says pattern was repeated correctly
-     ----------------------------------------------------------------------------------------------*/
-    public void startInteraction(){
-        if(type==WIRES){                    //this is where you create anything that needs to be passed in as an argument in the modules' interact()
-            int[] sampleArray={1,2,3};
-            cut.interact(sampleArray);
-        }
+    /*---------------------------------------------------------------------------------------
+    This method is used by Bomb class to see if user is interacting correctly with the module.
+    If it's false, a strike will be added in Bomb class.
+     --------------------------------------------------------------------------------------*/
+    public boolean correctPlayerAction(){
+        return correctAction;
     }
-    /*---------------------------------------------------------------------------------
-    This method checks if a module can be played.
-    Called whenever user clicks on the JPanel which contains the bomb
-    Returns a boolean that tells the game whether or not the module is already defused
-    ----------------------------------------------------------------------------------*/
-    public boolean alreadyDefused(int mouseX,int mouseY){
-        if(mod.contains(mouseX,mouseY)) {           //checking if the user clicked on a module or empty space
-            isFocused = true;                       //this enables interaction with the module
-            return defused;
-        }
-        return false;
-    }
-    /*---------------------------------------------------------------------
-    This method outlines the module box if it's currently focused
-    Calls the draw methods of each module. The modules then draw themselves
-     ---------------------------------------------------------------------*/
-    public void draw(Graphics g){
-        if(isFocused){
-            g.setColor(Color.GREEN);
-        }
-        else{
-            g.setColor(Color.BLACK);
-        }
-        g.drawRect((int)mod.getX(),(int)mod.getY(),(int)mod.getWidth(),(int)mod.getHeight());
-        if(type==WIRES){
-            cut.draw(g);
-        }
-    }
-    /*----------------------------------------------
-    This method returns the type of module this is
-    Used by
-    ----------------------------------------------------*/
+    /*----------------------------------------------------------------
+    Remove this method once we add the code to randomly generate bombs
+    -----------------------------------------------------------------*/
     public int getType(){
         return type;
     }
@@ -519,92 +606,47 @@ class Modules {
     public void setUnfocused(){
         isFocused=false;
     }
-}
-class Bomb extends JPanel implements MouseListener{
-    private String serial;          //Serial code used for more complex defusing rules
-    private int bat;                //number of batteries for same purpose as above
-    private int mod;                //The number of modules that will be on the bomb
-    private Modules[][] minigames;  //2D Array for the front and back of the bomb to be containing the minigames
-    private int face;               //1 for front of the bomb, 2 for the back, each displaying their own modules
-    private int mouseX,mouseY;
-    /*----------------------------------------------------------
-    *This is the constructor of the bomb
-    *Sets the serial code, batteries, modules, and components
-    *No return obviously
-    -----------------------------------------------------------*/
-    public Bomb(String serial,int bat,int mod, int[] modTypes){
-        addMouseListener(this);
-        this.serial=serial;
-        this.bat=bat;
-        this.mod=mod;
-        face=0;
-        int[][] possibleCoord={{100,100},{100,300},{300,100},{500,100},{500,300}};
-
-        if(mod>5){ //If we see that there are more than 5 components present (meaning 6 minigames and our 1 timer making 7 modules)
-            minigames=new Modules[6][2];
+    /*---------------------------------------------------------------------------------
+    This method checks if the user clicked on a module that hasn't been defused yet
+    Called in mousePressed() in Bomb class
+    Returns a boolean that tells the game whether or not the module is already defused
+    ----------------------------------------------------------------------------------*/
+    public boolean alreadyDefused(int mouseX,int mouseY){
+        if(mod.contains(mouseX,mouseY)) {
+            this.mouseX=mouseX;
+            this.mouseY=mouseY;
+            isFocused = true;                       //this enables interaction with the module
+            return defused;
         }
-        else {
-            minigames = new Modules[6][1];
-        }
-        for(int i=0;i<mod;i++) {
-            if (i<=5) { //Assigning our first 5 modules
-                minigames[i][0] = new Modules(modTypes[i],possibleCoord[i][0],possibleCoord[i][1]);/*some x+divider*i,some y+divider*i*/
-            }
-            else {
-                minigames[i - 5][1] = new Modules(modTypes[i],possibleCoord[i][0],possibleCoord[i][1]);
-            }
+        return false;
+    }
+    /*-----------------------------------------------------------------------------------------------------------------
+    This method calls the interaction methods of each module.
+    This enables gameplay, such as checking if correct wires were cut, or if Simon says pattern was repeated correctly
+    This is called in mousePressed() in Bomb class once it has been verified that the player clicked on a valid module
+     ------------------------------------------------------------------------------------------------------------------*/
+    public void startInteraction(){
+        if(type==WIRES){                    //this is where you create anything that needs to be passed in as an argument in the modules' interact()
+            int[] sampleArray={1,2,3};
+            correctAction=cut.interact(sampleArray);
         }
     }
-    /*----------------------------------------------------------------------
-    This method updates the game whenever the Timer fires in GameFrame class
-     ----------------------------------------------------------------------*/
-    public void updateState(){
-    }
-    /*--------------------------------------------------------------------------------------------
-    Draws a 3 x 2 grid that represents the bomb, called at same time as updateState() in GameFrame
-     --------------------------------------------------------------------------------------------*/
-    @Override
-    public void paintComponent(Graphics g){
-        g.setColor(new Color(255,255,255));
-        g.fillRect(0,0,getWidth(),getHeight());		//clearing the screen in preparation for new drawings
-        g.setColor(new Color(0,0,0));
-
-        for(int i=100;i<800;i+=200){						//drawing a 3 x 2 grid to represent the bomb
-            g.drawLine(i,100,i,500);
+    /*------------------------------------------------------------------------------
+    This method outlines the module box if it's currently focused
+    It also calls the draw methods of each module, which makes them draw themselves
+     ------------------------------------------------------------------------------*/
+    public void draw(Graphics g){
+        if(isFocused){                      //if this module is currently being focused on, it's outlined in green
+            g.setColor(Color.GREEN);
         }
-        for(int i=100;i<600;i+=200){
-            g.drawLine(100,i,700,i);
+        else{
+            g.setColor(Color.BLACK);
         }
-        for(Modules[] mod:minigames){
-            Modules facingMod=mod[face];
-            if(facingMod!=null) {
-                facingMod.draw(g);
-
-            }
+        g.drawRect((int)mod.getX(),(int)mod.getY(),200,200);       //drawing the box for the module
+        if(type==WIRES){
+            cut.draw(g);
         }
     }
-    /*--------------------------------------------------------
-    This method updates mouse coordinates whenever user clicks
-    ---------------------------------------------------------*/
-    public void mousePressed(MouseEvent e){
-        mouseX=e.getX();
-        mouseY=e.getY();
-        for(Modules[] mod:minigames){
-            Modules facingMod=mod[face];
-            if(facingMod!=null) {
-                if (!facingMod.alreadyDefused(mouseX, mouseY)) {          //user has clicked on a module
-                    facingMod.startInteraction();
-                }
-                else {
-                    facingMod.setUnfocused();
-                }
-            }
-        }
-    }
-    public void mouseEntered(MouseEvent e){}
-    public void mouseExited(MouseEvent e){}
-    public void mouseClicked(MouseEvent e){}
-    public void mouseReleased(MouseEvent e){}
 }
 /*--------------------------------------------------------------
 This class makes a wire module with a specified number of wires
@@ -648,7 +690,7 @@ class WireModule{
         for(int i=0;i<numWires;i++){
             g.setColor(new Color(colours[i][0],colours[i][1],colours[i][2]));
             Rectangle wire=wires[i];
-            g.fillRect((int)wire.getX(),(int)wire.getY(),(int)wire.getWidth(),(int)wire.getHeight());
+            g.fillRect((int)wire.getX(),(int)wire.getY(),200,10);
         }
     }
     /*
@@ -656,7 +698,6 @@ class WireModule{
     This method is called whenever a wire is clicked to see if wires are cut in the right order.
     */
     public boolean interact(int[] cutSoFar){
-        System.out.println("here 2");
         int[] correctOrder=Arrays.copyOfRange(codes,0,cutSoFar.length);
         return correctOrder.equals(cutSoFar);
     }
@@ -682,6 +723,15 @@ class WireModule{
      --------------------------------------------------------------*/
     public int getNumWires(){
         return numWires;
+    }
+}
+class SingleWire{
+    private Rectangle hitbox;
+    private int[] colour;
+    private int code;
+
+    public SingleWire(int x,int y, int[] rgb){
+
     }
 }
 /*--------------------------------------------------------------------------------------------------

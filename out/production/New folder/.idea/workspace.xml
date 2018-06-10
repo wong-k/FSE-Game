@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="f16c8fec-e1d3-4bce-b119-458a0d9f54ad" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/MainGame.java" beforeDir="false" afterPath="$PROJECT_DIR$/MainGame.java" afterDir="false" />
-    </list>
+    <list default="true" id="f16c8fec-e1d3-4bce-b119-458a0d9f54ad" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -16,8 +14,8 @@
       <file leaf-file-name="MainGame.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/MainGame.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="543">
-              <caret line="677" column="31" lean-forward="true" selection-start-line="677" selection-start-column="31" selection-end-line="677" selection-end-column="31" />
+            <state relative-caret-position="261">
+              <caret line="133" column="33" lean-forward="true" selection-start-line="133" selection-start-column="33" selection-end-line="133" selection-end-column="33" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="e#25720#25721#0" expanded="true" />
@@ -47,7 +45,7 @@
       <find>gameover</find>
       <find>bomb</find>
       <find>wiremodule</find>
-      <find>new Modules</find>
+      <find />
       <find>System.out.println</find>
     </findStrings>
   </component>
@@ -226,15 +224,29 @@
       <option name="project" value="LOCAL" />
       <updated>1528575862081</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Play, interact, and Bomb all work together now. Still need to add the code for each module">
+      <created>1528582111987</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1528582111987</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Play, interact, and Bomb all work together now. Still need to add the code for each module">
+      <created>1528582192607</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1528582192607</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1295" height="735" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info anchor="right" id="Palette" order="3" />
       <window_info anchor="bottom" id="TODO" order="7" />
+      <window_info anchor="bottom" id="Messages" order="0" weight="0.32961783" />
       <window_info anchor="right" id="Palette&#9;" order="7" />
       <window_info id="Image Layers" order="2" />
       <window_info anchor="right" id="Capture Analysis" order="4" />
@@ -258,7 +270,6 @@
       <window_info anchor="bottom" id="Message" order="1" />
       <window_info anchor="bottom" id="Cvs" order="5" weight="0.25" />
       <window_info anchor="bottom" id="Find" order="2" />
-      <window_info anchor="bottom" id="Messages" order="0" weight="0.32961783" />
     </layout>
   </component>
   <component name="VcsContentAnnotationSettings">
@@ -271,7 +282,8 @@
     <MESSAGE value="Updated project with Keith's code" />
     <MESSAGE value="Added Keith's code, the game now has a functional sequence of frames&#10;(main menu, instructions, select level, game over).&#10;Missing: bomb puzzles" />
     <MESSAGE value="Added comments to Keith's code" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added comments to Keith's code" />
+    <MESSAGE value="Play, interact, and Bomb all work together now. Still need to add the code for each module" />
+    <option name="LAST_COMMIT_MESSAGE" value="Play, interact, and Bomb all work together now. Still need to add the code for each module" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/MainGame.java">
@@ -507,8 +519,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/MainGame.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="543">
-          <caret line="677" column="31" lean-forward="true" selection-start-line="677" selection-start-column="31" selection-end-line="677" selection-end-column="31" />
+        <state relative-caret-position="261">
+          <caret line="133" column="33" lean-forward="true" selection-start-line="133" selection-start-column="33" selection-end-line="133" selection-end-column="33" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="e#25720#25721#0" expanded="true" />
