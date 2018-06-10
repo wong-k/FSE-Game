@@ -124,8 +124,8 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
     public void mouseReleased(MouseEvent e){}
     public void mousePressed(MouseEvent e){}
 
-    public static void main(String[]args){                  //create random array of integers, pass that into Bomb constructor because it'll make the specific modules from there
-        int[] moduleTypes=new int[1];
+    public static void main(String[]args){                  //create random array of integers 1 to 4
+        int[] moduleTypes=new int[1];                       //pass that Array into Bomb constructor, it'll  create the modules from there
         Bomb[] allBombs=new Bomb[10];
         Modules wireTest=new Modules(2,100,100);
         moduleTypes[0]=wireTest.getType();
@@ -467,6 +467,17 @@ class Bomb extends JPanel implements MouseListener{
             }
         }
     }
+    public void reset(){
+        strikes=face=0;
+        for(Modules[] modList:minigames){
+            if(modList[0]!=null) {                          //remove this once all modules are made
+                modList[0].reset();
+            }
+            if(modList.length==2){
+                modList[1].reset();
+            }
+        }
+    }
     /*----------------------------------------------------------------------------------------------------------
     This method is used by GameFrame to see how many mistakes the player has made and end the game if strikes==3
     -----------------------------------------------------------------------------------------------------------*/
@@ -627,8 +638,8 @@ class Modules {
      ------------------------------------------------------------------------------------------------------------------*/
     public void startInteraction(){
         if(type==WIRES){                    //this is where you create anything that needs to be passed in as an argument in the modules' interact()
-            int[] sampleArray={1,2,3};
-            correctAction=cut.interact(sampleArray);
+            correctAction=cut.interact(mouseX,mouseY);
+            System.out.println(correctAction);
         }
     }
     /*------------------------------------------------------------------------------
@@ -647,16 +658,21 @@ class Modules {
             cut.draw(g);
         }
     }
+    public void reset(){
+        if(type==WIRES){
+            cut.reset();
+        }
+    }
 }
 /*--------------------------------------------------------------
 This class makes a wire module with a specified number of wires
 *-------------------------------------------------------------*/
 class WireModule{
-    private Rectangle[] wires;				//each wire is a rectangle so collisions with the mouse can be detected
+    private SingleWire[] wires;				//each wire is a rectangle so collisions with the mouse can be detected
     private int[][]colours;					//the colours of the wires
-    private int[] codes;
-    private int numWires;
-    private int allottedTime;
+    private int[] correctOrder;             //contains codes in the correctOrder
+    private int numWires,allottedTime,startIndex;
+
     /*--------------------------------------------------------------------------------------------
     Constructor which creates a specified number of Rectangles and rgb values that represent wires
     "coord" is a list of y coordinates that paintComponent uses to draw the wires.
@@ -664,74 +680,102 @@ class WireModule{
      -------------------------------------------------------------------------------------------*/
     public WireModule(int startX,int startY){
         Random rand=new Random();
-        numWires=2+rand.nextInt(3);
-        allottedTime=10000*numWires;
-        colours=new int[numWires][3];	    //possible wire colours: red, blue, green, yellow, black
-        codes=new int[numWires];
-        wires=new Rectangle[numWires];		//creating the Rectangles that represent the wire hitboxes
-        int[][]allColours={{255,0,0},{0,0,255},{0,255,0},{255,255,0},{0,0,0}};
+        numWires=2+rand.nextInt(4);         //2 - 5 possible number of wires
+        allottedTime=10000*numWires;               //20 - 50 seconds to solve the module
+        int[][]allColours={{255,0,0},{0,255,0},{0,0,255},{255,255,0},{255,0,255},{0,255,255}};  //possible wire colours: red, blue, green, yellow, magenta,light blue
+        correctOrder=new int[numWires];
+        wires=new SingleWire[numWires];		                            //creating the Rectangles that represent the wire hitboxes
         int spaceBetween=(200-numWires*10)/(numWires+1);                //space between wires in order for them to be evenly spaced
+        startIndex=0;
 
         for(int i=0;i<numWires;i++){
             int index=rand.nextInt(numWires);							//choosing a random colour out of all the possible colours and assigning it to a wire
             int[] rgbSet=allColours[index];
-            colours[i]=rgbSet;
-
-            int sum=0;													//assigning a code to the wire that determines when it should be cut
-            sum+=rgbSet[0]+rgbSet[1]*2+rgbSet[2]*3;						//each colour value has a certain weighting that contributes to the code
-            codes[i]=sum;
+            correctOrder[i]=rgbSet[0]*numWires+rgbSet[1]*2+rgbSet[2]*3;
+            System.out.println("colour: "+Arrays.toString(rgbSet)+" code: "+correctOrder[i]);
 
             int YCoord=startY+spaceBetween*(i+1)+10*i;
-            wires[i]=new Rectangle(startX,YCoord,200,10);
+            wires[i]=new SingleWire(startX,YCoord,rgbSet,correctOrder[i]);
         }
-        Arrays.sort(codes);					//wires must be cut in ascending order
+        Arrays.sort(correctOrder);					//wires must be cut in ascending order
+        System.out.println(Arrays.toString(correctOrder));
     }
     public void draw(Graphics g){
-        for(int i=0;i<numWires;i++){
-            g.setColor(new Color(colours[i][0],colours[i][1],colours[i][2]));
-            Rectangle wire=wires[i];
-            g.fillRect((int)wire.getX(),(int)wire.getY(),200,10);
+        for(SingleWire wire:wires) {
+            int[] rgb = wire.getColour();
+            Rectangle hitbox = wire.getRect();
+            if (!wire.alreadyCut()) {
+                g.setColor(new Color(rgb[0], rgb[1], rgb[2]));
+            }
+            else{
+                g.setColor(Color.BLACK);
+            }
+            g.fillRect((int) hitbox.getX(), (int) hitbox.getY(), 200, 10);
         }
     }
-    /*
-    Work in progress, ignore this method for now.
-    This method is called whenever a wire is clicked to see if wires are cut in the right order.
-    */
-    public boolean interact(int[] cutSoFar){
-        int[] correctOrder=Arrays.copyOfRange(codes,0,cutSoFar.length);
-        return correctOrder.equals(cutSoFar);
+    public void reset(){
+        startIndex=0;
+        for(SingleWire wire:wires){
+            if(wire.alreadyCut())
+                wire.setCut();
+        }
+    }
+    /*-------------------------------------------------------------------------------------------------------
+    User has clicked on a wire, determine which wire was clicked and compare it to the index of correctOrder
+    The value returned determines if the player gets a strike or not
+     ------------------------------------------------------------------------------------------------------*/
+    public boolean interact(int x,int y){
+        SingleWire selected=null;                   //if this is still null at the end of the process, that means user clicked empty space
+        for(SingleWire wire:wires){                 //first, we have to determine if user clicked a wire or empty space
+            if(wire.contains(x,y)){
+                selected=wire;
+            }
+        }
+        if(selected!=null) {
+            if (selected.getCode() == correctOrder[startIndex] && !selected.alreadyCut()) {         //check if the correct wire was cut
+                startIndex++;
+                selected.setCut();
+                return true;
+            }
+        }
+        if(selected==null || selected.alreadyCut()){        //player isn't penalized for clicking empty space, or a wire that was already cut
+            return true;
+        }
+        return false;                                       //this means user clicked the incorrect wire
     }
     public int getAllottedTime(){
         return allottedTime;
     }
-    /*----------------------------------------------------
-     Used by paintComponent to draw the wires.
-     Also used by updateState to see if user clicked a wire.
-     ------------------------------------------------------*/
-    public Rectangle[] getWires(){
-        return wires;
-    }
-    /*----------------------------------------
-     Used by paintComponent to draw the wires.
-     ------------------------------------------*/
-    public int[] getColour(int index){
-        return colours[index];
-    }
-
-    /*--------------------------------------------------------------
-    Used by paintComponent to display rectangles where the wires are
-     --------------------------------------------------------------*/
-    public int getNumWires(){
-        return numWires;
-    }
 }
 class SingleWire{
     private Rectangle hitbox;
-    private int[] colour;
     private int code;
+    private int colour[];
+    private boolean cut;                //different graphics shown for cut and uncut wires
 
-    public SingleWire(int x,int y, int[] rgb){
-
+    public SingleWire(int x,int y, int[] rgb,int colourCode){
+        hitbox=new Rectangle(x,y,200,10);
+        code=colourCode;
+        colour=rgb;
+        cut=false;
+    }
+    public boolean alreadyCut(){
+        return cut;
+    }
+    public void setCut(){
+        cut=!cut;
+    }
+    public int[] getColour(){
+        return colour;
+    }
+    public Rectangle getRect(){
+        return hitbox;
+    }
+    public int getCode(){
+        return code;
+    }
+    public boolean contains(int x,int y){
+        return hitbox.contains(x,y);
     }
 }
 /*--------------------------------------------------------------------------------------------------
@@ -945,7 +989,7 @@ class GameOverFrame extends JFrame implements ActionListener,MouseListener {
         }
         if (source == playAgainBut) {               //a new game is started when player clicks play again
             setVisible(false);
-            //bomb.reset();
+            bomb.reset();
             GameFrame actualGame = new GameFrame(bomb, levelIndex,selectLevel);
             actualGame.start();
         }
