@@ -36,11 +36,11 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
         menuBack.setSize(800,600);
         menuBack.setLocation(0,0);
 
-        JLabel scoreLabel=new JLabel("Final Score: 01:30");			//displays final score
+        /*JLabel scoreLabel=new JLabel("Final Score: 01:30");			//displays final score
         scoreLabel.setSize(500,200);
         scoreLabel.setFont(new Font("Special Elite",Font.BOLD,40));
         scoreLabel.setForeground(Color.WHITE);
-        scoreLabel.setLocation(400,0);
+        scoreLabel.setLocation(400,0);*/
 
         playBut=new JButton("Bombs");                                        //making a play button that changes colour when hovering over it
         playBut.addActionListener(this);
@@ -65,7 +65,7 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
         infoBut.setBorderPainted(false);
 
         mainPage.add(menuBack,JLayeredPane.DEFAULT_LAYER);
-        mainPage.add(scoreLabel,JLayeredPane.DRAG_LAYER);
+        //mainPage.add(scoreLabel,JLayeredPane.DRAG_LAYER);
         mainPage.add(playBut,JLayeredPane.DRAG_LAYER);
         mainPage.add(infoBut,JLayeredPane.DRAG_LAYER);
         add(mainPage);
@@ -89,9 +89,6 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
                 System.out.println("Can't find html file");
             }
         }
-    }
-    public void generateBombs(){
-
     }
     /*-------------------------------------------------------------------------------
     This method makes the button text black when mouse isn't hovering over the buttons
@@ -125,8 +122,17 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
     public void mousePressed(MouseEvent e){}
 
     public static void main(String[]args){                  //create random array of integers 1 to 4
-        int[] moduleTypes=new int[1];                       //pass that Array into Bomb constructor, it'll  create the modules from there
         Bomb[] allBombs=new Bomb[10];
+        /*Random rand=new Random();
+        for(int i=0;i<10;i++){                              //making 10 bombs with random modules
+            int[] randomModules=new int[i+1];               //the number of modules equals the level of the bomb (1 to 10)
+            for(int j=0;j<i+1;j++){                         //Adding random numbers from 1-4 to randomModules[]. These numbers are interpreted as constants in Modules class
+                int module=rand.nextInt(4)+1;
+                randomModules[j]=module;
+            }                                               //generate serial codes and battery numbers
+            allBombs[i]=new Bomb("",0,randomModules);
+        }*/
+        int[] moduleTypes=new int[1];
         Modules wireTest=new Modules(2,100,100);
         moduleTypes[0]=wireTest.getType();
         allBombs[0]=new Bomb("",0,moduleTypes);
@@ -170,11 +176,11 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
         returnBut=new JButton("Main menu");
         returnBut.addActionListener(this);
         returnBut.addMouseListener(this);
-        returnBut.setSize(200,50);			//the location of the return and play buttons is constant for all pages, whereas the buttons for the levels changes location depending on the displayed panel
-        returnBut.setLocation(300,510);			//since return and play buttons remain constant, they're created here
+        returnBut.setSize(150,50);			//the location of the return and play buttons is constant for all pages, whereas the buttons for the levels changes location depending on the displayed panel
+        returnBut.setLocation(0,510);			//since return and play buttons remain constant, they're created here
         returnBut.setFont(new Font("Special Elite",Font.BOLD,20));
-        returnBut.setBackground(Color.WHITE);
-        returnBut.setForeground(Color.BLACK);
+        returnBut.setBackground(new Color(46,32,28));
+        returnBut.setForeground(Color.WHITE);
         returnBut.setFocusPainted(false);
         returnBut.setBorderPainted(false);
 
@@ -182,23 +188,21 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
         playBut.addActionListener(this);
         playBut.addMouseListener(this);
         playBut.setSize(200,50);
-        playBut.setLocation(300,0);
+        playBut.setLocation(300,510);
         playBut.setFont(new Font("Special Elite",Font.BOLD,35));
         playBut.setBackground(Color.WHITE);
         playBut.setForeground(Color.BLACK);
         playBut.setFocusPainted(false);
-        playBut.setBorderPainted(false);
 
         for(int i=0;i<10;i++){							                //creating a page for each level and 10 buttons that bring the player to specific level pages
             JButton newBut=new JButton("Level "+(i+1));
             newBut.addActionListener(this);
             newBut.addMouseListener(this);
-            newBut.setFont(new Font("Special Elite",Font.BOLD,35));
+            newBut.setFont(new Font("Special Elite",Font.BOLD,25));
             newBut.setBackground(Color.WHITE);
             newBut.setForeground(Color.BLACK);
-            newBut.setSize(200,50);						//the size of all buttons is constant
+            newBut.setSize(150,50);						//the size of all buttons is constant
             newBut.setFocusPainted(false);
-            newBut.setBorderPainted(false);
             levelBut[i]=newBut;
 
             BookPage newPage=new BookPage(i+1,allBombs[i]);
@@ -247,7 +251,7 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
             playBut.setForeground(Color.BLACK);     //setForeground() controls text colour
         }
         if(source==returnBut){
-            returnBut.setForeground(Color.BLACK);
+            returnBut.setForeground(Color.WHITE);
         }
         for(JButton but:levelBut){
             if(source==but){
@@ -309,18 +313,54 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
  *Custom Objects are required because every page has different buttons. These Objects facilitate the process of adding unique buttons.
  *---------------------------------------------------------------------------------------------------------------------------------*/
 class BookPage extends JPanel{
+    public final int BUTTON=1;               //Constants for clarity when dealing with modules
+    public final int WIRES=2;
+    public final int SYMBOLS=3;
+    public final int SIMON=4;
+
     private int pageNum;				//the level that the page represents (1 to 10)
-    private Bomb bomb;             //the bomb that's played for a specific level
+    private Bomb bomb;                  //the bomb that's played for a specific level
     private String locked;              //String because paintComponent writes either "Locked" or "Unlocked" on the panel
+    private Image back;
+    private int numWires,numPatterns,numSymbols,numButtons;
 
     /*----------------------------------------------------------
      *Constructor where "level" is the level the page represents
      *----------------------------------------------------------*/
     public BookPage(int level,Bomb inputBomb){
         pageNum=level;
-        setLayout(null);                           //allows us to add buttons wherever we want
+        setLayout(null);
         bomb=inputBomb;
         locked="Locked";
+        back=new ImageIcon("images/game back.png").getImage();
+        /*
+        int[] allModules=bomb.getModules();                                     //contains a series of numbers ranging from 1-4
+        HashMap<Integer,Integer> numFrequency=new HashMap<Integer,Integer>();   //get the frequency of those numbers to find out how many of each mmodule are in this bomb
+        for(int i:allModules){                                                  //the first value is the integer, the second value is its frequency
+            if(!numFrequency.containsKey(i)){                                   //if this value is unique, put it in the map with a frequency of 1
+                numFrequency.put(i,1);
+            }
+            else{                                                               //if the value isn't unique, put it in the map and increase the current frequency of that number
+                int currentFrequency=numFrequency.get(i);
+                numFrequency.put(i,currentFrequency+1);
+            }
+        }                                                                   //uncomment once all module code is in
+        for(Map.Entry<Integer,Integer> numPair:numFrequency.entrySet()){
+            int moduleType=numPair.getKey();
+            int frequency=numPair.getValue();
+            if(moduleType==BUTTON){
+                numButtons=frequency;
+            }
+            if(moduleType==WIRES){
+                numWires=frequency;
+            }
+            if(moduleType==SYMBOLS){
+                numSymbols=frequency;
+            }
+            if(moduleType==SIMON){
+                numPatterns=frequency;
+            }
+        }*/
     }
     public String getLockedStatus(){
         return locked;
@@ -349,13 +389,13 @@ class BookPage extends JPanel{
         }
         if(prev!=null){									//the first level page lacks a previous button, so this avoids a null pointer exception
             if(!isAncestorOf(prev)){
-                prev.setLocation(0,510);
+                prev.setLocation(150,510);
                 add(prev);
             }
         }
         if(next!=null){									//the last level page lacks a next button
             if(!isAncestorOf(next)){
-                next.setLocation(600,510);
+                next.setLocation(500,510);
                 add(next);
             }
         }
@@ -367,13 +407,25 @@ class BookPage extends JPanel{
      *---------------------------------------------------------------------------------------------------------------------------*/
     @Override
     public void paintComponent(Graphics g){
-        g.setColor(new Color(255,255,255));			        //make the bombs in main class. Pass around array of bombs as parameter in constructors.
-        //get info about the bombs and display the info here
-        g.fillRect(0,0,getWidth(),getHeight());
-        g.setFont(new Font("Special Elite",Font.PLAIN,50));
+        g.drawImage(back,0,0,this);
+        g.setColor(new Color(255,255,255));
+        g.fillRect(150,0,500,getHeight());
+
         g.setColor(new Color(0,0,0));
-        g.drawString(pageNum+"",375,150);                   //displaying level number
-        g.drawString("Status: "+locked,375,250);
+        for(int y=90;y<550;y+=70){
+            g.drawLine(150,y,650,y);
+        }
+        g.drawLine(400,510,400,510);
+        g.setFont(new Font("Special Elite",Font.BOLD,50));
+        g.drawString("Level "+pageNum,300,70);                   //displaying level number
+
+        g.setFont(new Font("Special Elite",Font.PLAIN,35));
+        g.drawString("Wires: 10",310,140);              //replace "10" with +numWires and so on
+        g.drawString("Simon says: 10",280,210);
+        g.drawString("Buttons: 10",300,280);
+        g.drawString("Symbols: 10",300,350);
+        g.drawString("Status: "+locked,260,420);
+        g.drawString("Best score: 02:30",250,490);
     }
 }
 /*----------------------------------------------------------------
@@ -438,7 +490,8 @@ class Bomb extends JPanel implements MouseListener{
     private int face;                       //Controls which side of the Bomb is shown. 0 for the front, 1 for the back.
     private int mouseX,mouseY,strikes;      //mouseX and mouseY are the mouse coordinates. strikes is how many mistakes the player has made. The game ends if strikes==3
     private Modules currentInteract;        //the module that is being interacted with right now
-
+    private int[] allModules;
+    private Image back;
     /*-----------------------------------------------------------------------------------------------------
     This is the constructor of the bomb
     "serial" is a serial code, "bat" is number of batteries
@@ -446,9 +499,11 @@ class Bomb extends JPanel implements MouseListener{
     ------------------------------------------------------------------------------------------------------*/
     public Bomb(String serialCode,int bat,int[] modTypes){
         addMouseListener(this);
+        allModules=modTypes;
         serial=serialCode;
         numBat=bat;
         numMod=modTypes.length;
+        back=new ImageIcon("images/game back.png").getImage();
         face=strikes=0;                                                                   //the front of the bomb is shown by default
         int[][] cornerCoord={{100,100},{100,300},{300,100},{500,100},{500,300}};          //each module box is drawn as a rectangle, so these are the rectangles' coordinates
 
@@ -467,9 +522,15 @@ class Bomb extends JPanel implements MouseListener{
             }
         }
     }
+    public int[] getModules(){
+        return allModules;
+    }
+    /*--------------------------------------------------------
+    This method resets a bomb, enabling it to be played again
+     --------------------------------------------------------*/
     public void reset(){
-        strikes=face=0;
-        for(Modules[] modList:minigames){
+        strikes=face=0;                                     //front face shown by default
+        for(Modules[] modList:minigames){                   //telling all the modules to reset themselves
             if(modList[0]!=null) {                          //remove this once all modules are made
                 modList[0].reset();
             }
@@ -502,8 +563,10 @@ class Bomb extends JPanel implements MouseListener{
     ----------------------------------------------------------------------------------------------------------*/
     @Override
     public void paintComponent(Graphics g){
-        g.setColor(new Color(255,255,255));
-        g.fillRect(0,0,getWidth(),getHeight());		//clearing the screen in preparation for new drawings
+        g.setColor(new Color(220,220,220));
+        g.drawImage(back,0,0,this);
+        g.fillRect(100,100,600,400);
+        //g.fillRect(0,0,getWidth(),getHeight());		//clearing the screen in preparation for new drawings
         g.setColor(new Color(0,0,0));
 
         for(int i=100;i<800;i+=200){						//drawing a 3 x 2 grid to represent the bomb
@@ -579,16 +642,16 @@ class Modules {
     ---------------------------------------------------------------------*/
     public Modules(int modType,int x,int y){
         type=modType;
-        /*if(type==1){
+        /*if(type==BUTTON){
             click=new Button();             //add arguments to constructors if necessary
         }*/
         if(type==WIRES){
             cut=new WireModule(x,y);
         }
-        /*if(type==3){
+        /*if(type==SYMBOLS){
             press=new Symbols();
         }
-        if(type==4){
+        if(type==SIMON){
             pattern=new Simon();
         }*/
         this.x=x;
@@ -641,6 +704,15 @@ class Modules {
             correctAction=cut.interact(mouseX,mouseY);
             System.out.println(correctAction);
         }
+        /*if(type==BUTTON){
+            correctAction=click.interact();
+        }
+        if(type==SYMBOLS){
+            correctAction=press.interact();
+        }
+        if(type==SIMON){
+            correctAction=pattern.interact();
+        }*/
     }
     /*------------------------------------------------------------------------------
     This method outlines the module box if it's currently focused
@@ -648,7 +720,7 @@ class Modules {
      ------------------------------------------------------------------------------*/
     public void draw(Graphics g){
         if(isFocused){                      //if this module is currently being focused on, it's outlined in green
-            g.setColor(Color.GREEN);
+            g.setColor(Color.WHITE);
         }
         else{
             g.setColor(Color.BLACK);
@@ -657,73 +729,88 @@ class Modules {
         if(type==WIRES){
             cut.draw(g);
         }
+        /*if(type==BUTTON){
+            click.draw(g);
+        }
+        if(type==SYMBOLS){
+            press.draw(g);
+        }
+        if(type==SIMON){
+            pattern.draw(g);
+        }*/
     }
     public void reset(){
         if(type==WIRES){
             cut.reset();
         }
+        /*if(type==BUTTON){
+            click.reset();
+        }
+        if(type==SYMBOLS){
+            press.reset();
+        }
+        if(type==SIMON){
+            pattern.reset();
+        }*/
     }
 }
-/*--------------------------------------------------------------
-This class makes a wire module with a specified number of wires
-*-------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------------------
+This class makes a wire module, draws it, and verifies if user is cutting wires in correct order.
+Each wire is given a code based on its rgb colour, and wires must be cut in ascending order of these codes.
+*---------------------------------------------------------------------------------------------------------*/
 class WireModule{
-    private SingleWire[] wires;				//each wire is a rectangle so collisions with the mouse can be detected
-    private int[][]colours;					//the colours of the wires
-    private int[] correctOrder;             //contains codes in the correctOrder
+    private SingleWire[] wires;				//custom Objects that contain each wire's hitbox and colour
+    private int[][]colours;					//this will contain the rgb colours of the wires
+    private int[] correctOrder;             //contains wire codes in the order they need to be cut
     private int numWires,allottedTime,startIndex;
 
-    /*--------------------------------------------------------------------------------------------
-    Constructor which creates a specified number of Rectangles and rgb values that represent wires
-    "coord" is a list of y coordinates that paintComponent uses to draw the wires.
-    "wireCount" is how many wires there will be
-     -------------------------------------------------------------------------------------------*/
+    /*------------------------------------------------------------------------
+    Constructor which creates random SingleWire Objects to represent the wires
+    "startX" and "startY" are where the module's box starts
+     ------------------------------------------------------------------------*/
     public WireModule(int startX,int startY){
         Random rand=new Random();
-        numWires=2+rand.nextInt(4);         //2 - 5 possible number of wires
-        allottedTime=10000*numWires;               //20 - 50 seconds to solve the module
-        int[][]allColours={{255,0,0},{0,255,0},{0,0,255},{255,255,0},{255,0,255},{0,255,255}};  //possible wire colours: red, blue, green, yellow, magenta,light blue
+        numWires=3+rand.nextInt(4);                                                       //3 - 5 possible number of wires
+        allottedTime=10000*numWires;                                                            //20 - 50 seconds to solve the module
+        int[][]allColours={{255,0,0},{0,255,0},{0,0,255},{255,0,255}};  //possible wire colours: red, blue, green, magenta
         correctOrder=new int[numWires];
-        wires=new SingleWire[numWires];		                            //creating the Rectangles that represent the wire hitboxes
-        int spaceBetween=(200-numWires*10)/(numWires+1);                //space between wires in order for them to be evenly spaced
+        wires=new SingleWire[numWires];
+        int spaceBetween=(200-numWires*10)/(numWires+1);                                         //space between wires in order for them to be evenly spaced
         startIndex=0;
 
-        for(int i=0;i<numWires;i++){
-            int index=rand.nextInt(numWires);							//choosing a random colour out of all the possible colours and assigning it to a wire
+        for(int i=0;i<numWires;i++){                                                            //creating 10 random SingleWire Objects
+            int index=rand.nextInt(4);							                        //choosing a random colour out of all the possible colours and assigning it to a wire
             int[] rgbSet=allColours[index];
-            correctOrder[i]=rgbSet[0]*numWires+rgbSet[1]*2+rgbSet[2]*3;
+            correctOrder[i]=rgbSet[0]*numWires+rgbSet[1]*2+rgbSet[2]*3;                         //each rgb value has a certain weighting it contributes to the final code
             System.out.println("colour: "+Arrays.toString(rgbSet)+" code: "+correctOrder[i]);
 
             int YCoord=startY+spaceBetween*(i+1)+10*i;
             wires[i]=new SingleWire(startX,YCoord,rgbSet,correctOrder[i]);
         }
-        Arrays.sort(correctOrder);					//wires must be cut in ascending order
+        Arrays.sort(correctOrder);					                    //wires must be cut from least to greatest code value
         System.out.println(Arrays.toString(correctOrder));
     }
+    /*--------------------------------------------------------------------------------------------------------------
+    This method draws all wires on the screen, called by paintComponent() in Bomb  whenever Timer fires in GameFrame
+     -------------------------------------------------------------------------------------------------------------*/
     public void draw(Graphics g){
         for(SingleWire wire:wires) {
-            int[] rgb = wire.getColour();
-            Rectangle hitbox = wire.getRect();
-            if (!wire.alreadyCut()) {
+            int[] rgb = wire.getColour();                               //the colour of the wire
+            Rectangle hitbox = wire.getRect();                          //the Rectangle that represents the wire's hitbox
+            if (!wire.alreadyCut()) {                                   //if the wire has already been cut, it turns white
                 g.setColor(new Color(rgb[0], rgb[1], rgb[2]));
             }
             else{
-                g.setColor(Color.BLACK);
+                g.setColor(Color.WHITE);
             }
             g.fillRect((int) hitbox.getX(), (int) hitbox.getY(), 200, 10);
         }
     }
-    public void reset(){
-        startIndex=0;
-        for(SingleWire wire:wires){
-            if(wire.alreadyCut())
-                wire.setCut();
-        }
-    }
-    /*-------------------------------------------------------------------------------------------------------
-    User has clicked on a wire, determine which wire was clicked and compare it to the index of correctOrder
-    The value returned determines if the player gets a strike or not
-     ------------------------------------------------------------------------------------------------------*/
+    /*--------------------------------------------------------------------
+    This method determines if user is cutting wires in the correct order.
+    The value returned determines if the player gets a strike or not.
+    "x" and "y" are the mouse coordinates
+     -------------------------------------------------------------------*/
     public boolean interact(int x,int y){
         SingleWire selected=null;                   //if this is still null at the end of the process, that means user clicked empty space
         for(SingleWire wire:wires){                 //first, we have to determine if user clicked a wire or empty space
@@ -732,138 +819,88 @@ class WireModule{
             }
         }
         if(selected!=null) {
-            if (selected.getCode() == correctOrder[startIndex] && !selected.alreadyCut()) {         //check if the correct wire was cut
-                startIndex++;
+            if (selected.getCode() == correctOrder[startIndex] && !selected.alreadyCut()) {         //check if the correct wire was cut by comparing the correct wire's code to the clicked wire's code
+                startIndex++;                                                                       //the correct wire has been clicked, which means the next wire must be compared to the next element in correctOrder[]
                 selected.setCut();
                 return true;
             }
         }
-        if(selected==null || selected.alreadyCut()){        //player isn't penalized for clicking empty space, or a wire that was already cut
+        if(selected==null || selected.alreadyCut()){        //player isn't penalized for clicking empty space or a wire that was already cut
             return true;
         }
         return false;                                       //this means user clicked the incorrect wire
+    }
+    /*---------------------------------------------------------------
+    This method resets the wire module so a level can be played again
+    ----------------------------------------------------------------*/
+    public void reset(){
+        startIndex=0;
+        for(SingleWire wire:wires){                         //every wire that was cut is now whole again
+            if(wire.alreadyCut())
+                wire.setCut();
+        }
     }
     public int getAllottedTime(){
         return allottedTime;
     }
 }
+/*-------------------------------------------------
+Each wire in the wire module is a SingleWire Object
+--------------------------------------------------*/
 class SingleWire{
-    private Rectangle hitbox;
+    private Rectangle hitbox;           //the wire's hitbox
     private int code;
-    private int colour[];
-    private boolean cut;                //different graphics shown for cut and uncut wires
+    private int colour[];               //the wire's colour
+    private boolean cut;                //draw() in WireModule shows different graphics for cut and uncut wires
 
+    /*-------------------------------------------------------------------------------------------------------
+    Constructor where "x" and "y" are starting coordinates for the hitbox Rectangle.
+    "rgb" is the rgb values for this wire's colour, colourCode is the wire's code that controls cutting order
+     -------------------------------------------------------------------------------------------------------*/
     public SingleWire(int x,int y, int[] rgb,int colourCode){
         hitbox=new Rectangle(x,y,200,10);
         code=colourCode;
         colour=rgb;
         cut=false;
     }
+    /*------------------------------------------------------------------------------------------------------------
+    This method is used by interact() in WireModule to see if user is clicking on a wire that has already been cut
+     ------------------------------------------------------------------------------------------------------------*/
     public boolean alreadyCut(){
         return cut;
     }
+    /*-------------------------------------------------------------------
+    By changing this variable, different graphics for this wire are shown.
+    USed by reset() in WireModule to make all cut wires whole again
+    -------------------------------------------------------------------*/
     public void setCut(){
         cut=!cut;
     }
+    /*-------------------------------------------
+    Used by draw() in WireModule to draw the wire
+     -------------------------------------------*/
     public int[] getColour(){
         return colour;
     }
+    /*--------------------------------------------------------------
+    Returns the wire's hitbox to check if user is clicking on a wire
+     --------------------------------------------------------------*/
     public Rectangle getRect(){
         return hitbox;
     }
+    /*--------------------------------------------------------------
+    Returns a wire's code to see if user clicked on the correct wire
+    --------------------------------------------------------------*/
     public int getCode(){
         return code;
     }
+    /*-----------------------------------------------------------------------------------
+    Used by interact() in WireModule to see if user is clicking on a wire or empty space
+     ----------------------------------------------------------------------------------*/
     public boolean contains(int x,int y){
         return hitbox.contains(x,y);
     }
 }
-/*--------------------------------------------------------------------------------------------------
- *This class makes the JPanel that's the game screen. It contains a  bomb with modules as attributes
- *-------------------------------------------------------------------------------------------------
-class BombPanel extends JPanel implements MouseListener{
-    private int mouseX,mouseY;          //coordinates of mouse
-    private TimeModule timer;           //a countdown
-    private WireModule wires;           //the wires puzzle
-    private int totalTime;
-    /*--------------------------------------------------------
-    Constructor which makes a timer and wire module.
-    "numWires" specifies how many wires are in the wire module.
-    "timeLeft" is the time the player has to complete the level
-     ---------------------------------------------------------
-    public BombPanel(int numWires){
-        addMouseListener(this);
-        mouseX=mouseY=0;
-        int[] wireYCoord=new int[numWires];
-        int spaceBetweenWires=(200-10*numWires)/(numWires+1);		//adjust: 200, which is the height of the squares on the grid.
-        for(int i=0;i<numWires;i++){
-            int nextYCoord=100+spaceBetweenWires*(i+1)+10*i;		//adjust: 100, which is y-coord where the module box starts. 10, which is current width of wires
-            wireYCoord[i]=nextYCoord;
-        }
-        wires=new WireModule(wireYCoord);					//creating a wire module
-        totalTime=3000;//wires.getAllottedTime()+1000;
-        timer=new TimeModule(340,425,totalTime);		//creating a timer
-    }
-    public int getTotalTime(){
-        return totalTime;
-    }
-    /*--------------------------------------------------------
-    This method is called whenever player clicks "Play again"
-    It resets all the modules so the level can be played again
-     --------------------------------------------------------
-    public void reset(){
-        timer.resetTime();
-    }
-    /*----------------------------------------------------------------------
-    This method updates the game whenever the Timer fires in GameFrame class
-     ----------------------------------------------------------------------
-    public void updateState(){
-        timer.subtractTime();						//displaying a count down
-        for(Rectangle rect:wires.getWires()){		//checks if user clicks on wire
-            if(rect.contains(mouseX,mouseY)){
-                System.out.println("true");
-            }
-        }
-    }
-
-    /*--------------------------------------------------------------------------------------------
-    Draws a 3 x 2 grid that represents the bomb, called at same time as updateState() in GameFrame
-     --------------------------------------------------------------------------------------------
-    @Override
-    public void paintComponent(Graphics g){
-        g.setColor(new Color(255,255,255));
-        g.fillRect(0,0,getWidth(),getHeight());		//clearing the screen in preparation for new drawings
-        g.setColor(new Color(0,0,0));
-
-        for(int i=100;i<800;i+=200){						//drawing a 3 x 2 grid to represent the bomb
-            g.drawLine(i,100,i,500);
-        }
-        for(int i=100;i<600;i+=200){
-            g.drawLine(100,i,700,i);
-        }
-
-        g.setFont(new Font("Arial",Font.PLAIN,50));			//displaying time
-        g.drawString(timer.getTime(),timer.getX(),timer.getY());
-
-        for(int i=0;i<wires.getNumWires();i++){							//drawing the wires on screen
-            Rectangle rect=wires.getWires()[i];
-            int[] newColour=wires.getColour(i);
-            g.setColor(new Color(newColour[0],newColour[1],newColour[2]));
-            g.fillRect((int)rect.getX(),(int)rect.getY(),(int)rect.getWidth(),(int)rect.getHeight());
-        }
-    }
-    /*--------------------------------------------------------
-    This method updates mouse coordinates whenever user clicks
-     ---------------------------------------------------------
-    public void mousePressed(MouseEvent e){
-        mouseX=e.getX();
-        mouseY=e.getY();
-    }
-    public void mouseEntered(MouseEvent e){}
-    public void mouseExited(MouseEvent e){}
-    public void mouseClicked(MouseEvent e){}
-    public void mouseReleased(MouseEvent e){}
-}*/
 /*---------------------------------------------
  This class makes a countdown for a Bomb Object
  --------------------------------------------*/
