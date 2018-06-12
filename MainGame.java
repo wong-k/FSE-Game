@@ -190,7 +190,7 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
         playBut.setSize(200,50);
         playBut.setLocation(300,510);
         playBut.setFont(new Font("Special Elite",Font.BOLD,35));
-        playBut.setBackground(Color.WHITE);
+        playBut.setBackground(new Color(255,247,152));
         playBut.setForeground(Color.BLACK);
         playBut.setFocusPainted(false);
 
@@ -199,7 +199,7 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
             newBut.addActionListener(this);
             newBut.addMouseListener(this);
             newBut.setFont(new Font("Special Elite",Font.BOLD,25));
-            newBut.setBackground(Color.WHITE);
+            newBut.setBackground(new Color(255,247,152));
             newBut.setForeground(Color.BLACK);
             newBut.setSize(150,50);						//the size of all buttons is constant
             newBut.setFocusPainted(false);
@@ -408,7 +408,7 @@ class BookPage extends JPanel{
     @Override
     public void paintComponent(Graphics g){
         g.drawImage(back,0,0,this);
-        g.setColor(new Color(255,255,255));
+        g.setColor(new Color(255,247,152));
         g.fillRect(150,0,500,getHeight());
 
         g.setColor(new Color(0,0,0));
@@ -431,11 +431,12 @@ class BookPage extends JPanel{
 /*----------------------------------------------------------------
 This class controls the gameplay by displaying and updating a bomb
  -----------------------------------------------------------------*/
-class GameFrame extends JFrame implements ActionListener{
+class GameFrame extends JFrame implements ActionListener,MouseListener{
     private Timer myTimer;                      //controls when the bomb is updated
     private int tickCount,levelIndex;           //tickCount is a countdown. When it reaches 0, the game stops.
     private Bomb bomb;
     private SelectLevelPage selectLevel;
+    private JButton flipBut;
 
     /*--------------------------------------------------------------
     Constructor which makes the frame
@@ -447,12 +448,28 @@ class GameFrame extends JFrame implements ActionListener{
         setSize(800,600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-        myTimer=new Timer(10,this);
-        //tickCount=thisBomb.getTotalTime();                                        //this can be adjusted by making a getTime() method for the bomb
-        bomb=thisBomb;
-        add(bomb);
         levelIndex=index;
         selectLevel=levelPage;
+        myTimer=new Timer(10,this);
+        bomb=thisBomb;
+        JLayeredPane thisFrame=new JLayeredPane();
+        thisFrame.setLayout(null);
+        bomb.setBounds(0,0,800,600);
+
+        flipBut=new JButton("Flip");
+        flipBut.setSize(100,100);
+        flipBut.setLocation(700,0);
+        flipBut.addActionListener(this);
+        flipBut.addMouseListener(this);
+        flipBut.setFont(new Font("Special Elite",Font.PLAIN,30));
+        flipBut.setBackground(new Color(46,32,28));
+        flipBut.setForeground(Color.WHITE);
+        flipBut.setFocusPainted(false);
+        flipBut.setBorderPainted(false);
+
+        thisFrame.add(bomb,JLayeredPane.DEFAULT_LAYER);
+        thisFrame.add(flipBut,JLayeredPane.DRAG_LAYER);
+        add(thisFrame);
         setVisible(true);
     }
     /*-----------------------------------------------------------------
@@ -471,11 +488,35 @@ class GameFrame extends JFrame implements ActionListener{
             bomb.updateState();
             bomb.repaint();
         }
-        if(tickCount==0 || bomb.getStrikes()==3){                   //game ends if time runs out, or player makes 3 mistakes
+        if(source==flipBut){
+            bomb.changeFace();
+        }
+        if(bomb.getTime()==0 || bomb.getStrikes()==3){                   //game ends if time runs out, or player makes 3 mistakes
             myTimer.stop();
             new GameOverFrame(bomb,levelIndex,selectLevel);
         }
     }
+    /*-------------------------------------------------------------------
+ This method makes button text white when mouse hovers over the button
+  -------------------------------------------------------------------*/
+    public void mouseEntered(MouseEvent e){
+        Object source=e.getSource();
+        if(source==flipBut){
+            flipBut.setForeground(Color.RED);
+        }
+    }
+    public void mouseExited(MouseEvent e){
+        Object source=e.getSource();
+        if(source==flipBut){
+            flipBut.setForeground(Color.WHITE);
+        }
+    }
+    /*-------------------------------------------------------------------------
+    The following methods must be included in order to implement MouseListener
+     -------------------------------------------------------------------------*/
+    public void mouseClicked(MouseEvent e){}
+    public void mouseReleased(MouseEvent e){}
+    public void mousePressed(MouseEvent e){}
 }
 /*---------------------------------------------------------------------------------------------------
 This class makes a bomb Object that has an Array of modules as an attribute
@@ -492,6 +533,7 @@ class Bomb extends JPanel implements MouseListener{
     private Modules currentInteract;        //the module that is being interacted with right now
     private int[] allModules;
     private Image back;
+    private TimeModule timer;
     /*-----------------------------------------------------------------------------------------------------
     This is the constructor of the bomb
     "serial" is a serial code, "bat" is number of batteries
@@ -521,6 +563,19 @@ class Bomb extends JPanel implements MouseListener{
                 minigames[i - 5][1] = new Modules(modTypes[i],cornerCoord[i-5][0],cornerCoord[i-5][1]);
             }
         }
+        int totalTime=1000;                                        //creating a timer
+        for(Modules[] mod:minigames){
+            if(mod[0]!=null){
+                totalTime+=mod[0].getAllottedTime();
+            }
+            if(mod.length==2){
+                totalTime+=mod[1].getAllottedTime();
+            }
+        }
+        timer=new TimeModule(300,300,totalTime);
+    }
+    public int getTime(){
+        return timer.getTime();
     }
     public int[] getModules(){
         return allModules;
@@ -530,6 +585,7 @@ class Bomb extends JPanel implements MouseListener{
      --------------------------------------------------------*/
     public void reset(){
         strikes=face=0;                                     //front face shown by default
+        timer.reset();
         for(Modules[] modList:minigames){                   //telling all the modules to reset themselves
             if(modList[0]!=null) {                          //remove this once all modules are made
                 modList[0].reset();
@@ -556,6 +612,7 @@ class Bomb extends JPanel implements MouseListener{
     This method updates the Bomb whenever the Timer fires in GameFrame class
      ----------------------------------------------------------------------*/
     public void updateState(){
+        timer.subtractTime();
     }
     /*---------------------------------------------------------------------------------------------------------
     This method draws a 3 x 2 grid that represents the bomb. It also tells all the modules to draw themselves.
@@ -563,10 +620,9 @@ class Bomb extends JPanel implements MouseListener{
     ----------------------------------------------------------------------------------------------------------*/
     @Override
     public void paintComponent(Graphics g){
-        g.setColor(new Color(220,220,220));
+        g.setColor(new Color(211,211,211));
         g.drawImage(back,0,0,this);
         g.fillRect(100,100,600,400);
-        //g.fillRect(0,0,getWidth(),getHeight());		//clearing the screen in preparation for new drawings
         g.setColor(new Color(0,0,0));
 
         for(int i=100;i<800;i+=200){						//drawing a 3 x 2 grid to represent the bomb
@@ -575,7 +631,7 @@ class Bomb extends JPanel implements MouseListener{
         for(int i=100;i<600;i+=200){
             g.drawLine(100,i,700,i);
         }
-
+        timer.draw(g);
         for(Modules[] mod:minigames){                       //drawing the modules on the current face
             Modules facingMod=mod[face];
             if(facingMod!=null) {
@@ -753,6 +809,21 @@ class Modules {
             pattern.reset();
         }*/
     }
+    public int getAllottedTime(){
+        if(type==WIRES) {
+            return cut.getAllottedTime();
+        }
+        /*if(type==BUTTON){
+            return click.getAllottedTime();
+        }
+        if(type==SYMBOLS){
+            return press.getAllottedTime();
+        }
+        else{
+            return pattern.getAllottedTime();
+        }*/
+        return 0;
+    }
 }
 /*--------------------------------------------------------------------------------------------------------
 This class makes a wire module, draws it, and verifies if user is cutting wires in correct order.
@@ -770,7 +841,7 @@ class WireModule{
      ------------------------------------------------------------------------*/
     public WireModule(int startX,int startY){
         Random rand=new Random();
-        numWires=3+rand.nextInt(4);                                                       //3 - 5 possible number of wires
+        numWires=3+rand.nextInt(3);                                                       //3 - 5 possible number of wires
         allottedTime=10000*numWires;                                                            //20 - 50 seconds to solve the module
         int[][]allColours={{255,0,0},{0,255,0},{0,0,255},{255,0,255}};  //possible wire colours: red, blue, green, magenta
         correctOrder=new int[numWires];
@@ -915,10 +986,13 @@ class TimeModule{
         y=yCoord;
         time=originalTime=timeLeft;
     }
+    public int getTime(){
+        return time;
+    }
     /*-------------------------------------------------------------------------
     This method allows players to play a level again by resetting the countdown
      -------------------------------------------------------------------------*/
-    public void resetTime(){
+    public void reset(){
         time=originalTime;
     }
     /*------------------------------------------------------------------------
@@ -927,25 +1001,15 @@ class TimeModule{
     public void subtractTime(){
         time-=10;					//called every 10 milliseconds
     }
-    /*---------------------------------------------------------
-    Accessor methods used by paintComponent to display the time
-     ----------------------------------------------------------*/
-    public int getX(){
-        return x;
-    }
-    public int getY(){
-        return y;
-    }
 
-    /*--------------------------------------------------------------------------------------
-     This method returns the time remaining in the format of minutes:seconds, such as 01:30
-     Returns the time as a String so paintComponent can display it
-     *-----------------------------------------------------------------------------------*/
-    public String getTime(){
+    public void draw(Graphics g){
+        g.setColor(Color.BLACK);
+        g.drawRect(310,370,180,80);
+        g.setFont(new Font("Special Elite",Font.BOLD,50));
         int min=time/60000;
         int seconds=(time-(min*60000))/1000;
-        String output=String.format("%2d:%2d",(int)min,seconds).replace(" ","0");		//replacing blank spaces with 0's so it looks like a timer
-        return output;
+        String displayed=String.format("%2d:%2d",(int)min,seconds).replace(" ","0");		//replacing blank spaces with 0's so it looks like a timer
+        g.drawString(displayed,320,430);
     }
 }
 /*--------------------------------------------------------------------
