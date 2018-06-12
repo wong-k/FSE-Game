@@ -1165,7 +1165,7 @@ class GameOverFrame extends JFrame implements ActionListener,MouseListener {
      -------------------------------------------------------------------*/
     public void mouseEntered(MouseEvent e) {
         Object source = e.getSource();
-        if (source == playAgainBut) {
+        if (source == playAgainBut) {   //comment
             playAgainBut.setForeground(Color.RED);
         }
         if (source == returnBut) {
