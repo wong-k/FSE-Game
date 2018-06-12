@@ -8,15 +8,18 @@
  */
 import javax.swing.*;
 import java.io.*;
+import java.applet.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.*;
+import java.net.MalformedURLException;
 import java.util.*;
 import javax.swing.Timer;		//import Timer specifically to avoid conflict with util Timer
 public class MainGame extends JFrame implements ActionListener,MouseListener {
     private JButton playBut,infoBut;				//buttons that bring user to level selection and instruction pages
-    private Bomb[] allBombs;
+    private Bomb[] allBombs;                        //contains 10 randomly generated bombs for the game
     private SelectLevelPage selectLevel;
+    private AudioClip sound;                        //enables sound effects for the buttons
     /*---------------------------------------------------------------------------------------------------------------------------
     Constructor which makes the main menu
     Rather than having to create a new SelectLevelPage whenever user clicks "Play", a SelectLevelPage is passed in as an argument
@@ -29,7 +32,7 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
         allBombs=new Bomb[10];
         selectLevel=selectPage;
 
-        ImageIcon background=new ImageIcon("images/main menu back.png");		//adding a background to main menu
+        ImageIcon background=new ImageIcon("images/main menu back.png");		//adding a background image to main menu
         JLabel menuBack=new JLabel(background);
         JLayeredPane mainPage=new JLayeredPane();
         mainPage.setLayout(null);
@@ -50,8 +53,8 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
         playBut.setForeground(Color.BLACK);
         playBut.setSize(220,60);
         playBut.setLocation(450,365);
-		playBut.setFocusPainted(false);
-		playBut.setBorderPainted(false);
+        playBut.setFocusPainted(false);
+        playBut.setBorderPainted(false);
 
         infoBut=new JButton("Manual");                                      //creating a button that opens html manual
         infoBut.addActionListener(this);
@@ -69,6 +72,13 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
         mainPage.add(playBut,JLayeredPane.DRAG_LAYER);
         mainPage.add(infoBut,JLayeredPane.DRAG_LAYER);
         add(mainPage);
+        try{                                                                    //loading the audio file
+            File soundFile=new File("button click.wav");
+            sound=Applet.newAudioClip(soundFile.toURL());
+        }
+        catch(MalformedURLException e){
+            System.out.println("Can't find audio file");
+        }
         setVisible(true);
     }
     /*-----------------------------------------------------
@@ -76,6 +86,7 @@ public class MainGame extends JFrame implements ActionListener,MouseListener {
      *-----------------------------------------------------*/
     public void actionPerformed(ActionEvent evt) {
         Object source=evt.getSource();
+        sound.play();
         if(source==playBut){				//when play button is clicked, the main menu is no longer visible and the level selection frame is shown
             setVisible(false);
             selectLevel.start();            //this makes the select level page visible
@@ -155,6 +166,7 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
     private JButton[] levelBut;								//Array that stores the next/previous buttons to flip between pages
     private int level;
     private Bomb[] allBombs;
+    private AudioClip pageSound,buttonSound;
     /*-----------------------------------------------------------------------------------------
      Constructor which makes the card layout, buttons, and BookPage Objects
      "displayedLevel" is an index of levelBut and pages. It controls which level page is shown.
@@ -177,7 +189,7 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
         returnBut.addActionListener(this);
         returnBut.addMouseListener(this);
         returnBut.setSize(150,50);			//the location of the return and play buttons is constant for all pages, whereas the buttons for the levels changes location depending on the displayed panel
-        returnBut.setLocation(0,510);			//since return and play buttons remain constant, they're created here
+        returnBut.setLocation(0,510);			    //since return and play buttons remain constant, they're created here
         returnBut.setFont(new Font("Special Elite",Font.BOLD,20));
         returnBut.setBackground(new Color(46,32,28));
         returnBut.setForeground(Color.WHITE);
@@ -207,14 +219,23 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
 
             BookPage newPage=new BookPage(i+1,allBombs[i]);
             pages[i]=newPage;
-            completeBook.add(newPage,(i+1)+"");            //the String assigned to each level is a number from 1 to 10 for clarity. It is not an index
+            completeBook.add(newPage,(i+1)+"");            //the String assigned to each level is a number from 1 to 10, not an index
+        }
+        try{
+            File pageFile=new File("page flip.wav");
+            File buttonFile=new File("button click.wav");
+            pageSound=Applet.newAudioClip(pageFile.toURL());
+            buttonSound=Applet.newAudioClip(buttonFile.toURL());
+        }
+        catch(MalformedURLException e){
+            System.out.println("Can't find audio file");
         }
         unlockLevel(0);                                    //the first level is unlocked by default
         showPage(displayedLevel);                                   //displaying the level indicated by displayedLevel
         getContentPane().add(completeBook);
     }
     /*--------------------------------------------------------------------------------------------------------
-    This method unlocks a level to play, called whenever user completes a level and returns to SelectLevelPage.
+    This method unlocks a level to play, called whenever user completes a level and returns to SelectLevelPage
      ---------------------------------------------------------------------------------------------------------*/
     public void unlockLevel(int pageIndex){
         pages[pageIndex].unlock();
@@ -276,22 +297,18 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
             }
         }
     }
-    /*-------------------------------------------------------------------------
-    The following methods must be included in order to implement MouseListener
-     -------------------------------------------------------------------------*/
-    public void mouseClicked(MouseEvent e){}
-    public void mouseReleased(MouseEvent e){}
-    public void mousePressed(MouseEvent e){}
     /*-----------------------------------------------------------------------------
      *This method changes the page that's shown whenever the player clicks a button
      *----------------------------------------------------------------------------*/
     public void actionPerformed(ActionEvent e){
         Object source=e.getSource();
         if(source==returnBut){				//the main menu is shown if the return to main menu button is clicked
+            buttonSound.play();
             setVisible(false);
             new MainGame(this);
         }
         if(source==playBut && currentPage.getLockedStatus().equals("Unlocked")){              //game frame is in charge of updating and drawing the bomb
+            buttonSound.play();
             setVisible(false);
             GameFrame actualGame=new GameFrame(currentPage.getBomb(),level,this);
             actualGame.start();
@@ -302,18 +319,25 @@ class SelectLevelPage extends JFrame implements ActionListener,MouseListener{
         else{								//detecting which level button is clicked and showing the corresponding level page
             for(int i=0;i<10;i++){
                 if(source==levelBut[i]){    //From testing, it was found that buttons occasionally disappear from panels when clicking back and forth.
+                    pageSound.play();
                     showPage(i);            //Therefore, all the buttons must be added whenever a new page is displayed, which is what showPage does.
                 }
             }
         }
     }
+    /*-------------------------------------------------------------------------
+    The following methods must be included in order to implement MouseListener
+     -------------------------------------------------------------------------*/
+    public void mouseClicked(MouseEvent e){}
+    public void mouseReleased(MouseEvent e){}
+    public void mousePressed(MouseEvent e){}
 }
 /*---------------------------------------------------------------------------------------------------------------------------------
  *This class makes a panel designated to a specific level. The 10 level pages are created in SelectLevelPage constructor.
  *Custom Objects are required because every page has different buttons. These Objects facilitate the process of adding unique buttons.
  *---------------------------------------------------------------------------------------------------------------------------------*/
 class BookPage extends JPanel{
-    public final int BUTTON=1;               //Constants for clarity when dealing with modules
+    public final int BUTTON=1;           //Constants for clarity when dealing with modules
     public final int WIRES=2;
     public final int SYMBOLS=3;
     public final int SIMON=4;
@@ -362,9 +386,15 @@ class BookPage extends JPanel{
             }
         }*/
     }
+    /*------------------------------------------------------------------------------------
+    This method is used by paintComponent() to tell player if level is locked or unlocked
+    ------------------------------------------------------------------------------------*/
     public String getLockedStatus(){
         return locked;
     }
+    /*--------------------------------------------------------------------------
+    Once a level is unlocked, this method updates the interface to reflect that
+     -------------------------------------------------------------------------*/
     public void unlock(){
         locked="Unlocked";
     }
@@ -429,18 +459,18 @@ class BookPage extends JPanel{
     }
 }
 /*----------------------------------------------------------------
-This class controls the gameplay by displaying and updating a bomb
+This class controls the gameplay by displaying and updating a Bomb
  -----------------------------------------------------------------*/
 class GameFrame extends JFrame implements ActionListener,MouseListener{
     private Timer myTimer;                      //controls when the bomb is updated
-    private int tickCount,levelIndex;           //tickCount is a countdown. When it reaches 0, the game stops.
+    private int levelIndex;
     private Bomb bomb;
     private SelectLevelPage selectLevel;
-    private JButton flipBut;
+    private JButton flipBut;                    //controls which side of the Bomb is displayed
 
     /*--------------------------------------------------------------
     Constructor which makes the frame
-    "thisBomb" is the bomb that belongs to the level being played
+    "thisBomb" is the Bomb that belongs to the level being played
     "index" is an index of BookPages. index+1 is the level (1 to 10)
      ---------------------------------------------------------------*/
     public GameFrame(Bomb thisBomb, int index,SelectLevelPage levelPage){
@@ -454,15 +484,15 @@ class GameFrame extends JFrame implements ActionListener,MouseListener{
         bomb=thisBomb;
         JLayeredPane thisFrame=new JLayeredPane();
         thisFrame.setLayout(null);
-        bomb.setBounds(0,0,800,600);
+        bomb.setBounds(0,0,800,600);                        //necessary because I want to add the Bomb (which is a JPanel) and flipBut at specific locations
 
         flipBut=new JButton("Flip");
         flipBut.setSize(100,100);
         flipBut.setLocation(700,0);
         flipBut.addActionListener(this);
         flipBut.addMouseListener(this);
-        flipBut.setFont(new Font("Special Elite",Font.PLAIN,30));
-        flipBut.setBackground(new Color(46,32,28));
+        flipBut.setFont(new Font("Special Elite",Font.PLAIN,25));
+        flipBut.setBackground(new Color(42,22,13));
         flipBut.setForeground(Color.WHITE);
         flipBut.setFocusPainted(false);
         flipBut.setBorderPainted(false);
@@ -484,27 +514,29 @@ class GameFrame extends JFrame implements ActionListener,MouseListener{
     public void actionPerformed(ActionEvent evt){
         Object source=evt.getSource();
         if(source==myTimer){
-            tickCount-=10;
             bomb.updateState();
             bomb.repaint();
         }
-        if(source==flipBut){
+        if(source==flipBut){                                   //this makes the bomb show either the front or back side
             bomb.changeFace();
         }
-        if(bomb.getTime()==0 || bomb.getStrikes()==3){                   //game ends if time runs out, or player makes 3 mistakes
+        if(bomb.getTime()==0 || bomb.getStrikes()==3){         //game ends if time runs out or player makes 3 mistakes
             myTimer.stop();
             new GameOverFrame(bomb,levelIndex,selectLevel);
         }
     }
     /*-------------------------------------------------------------------
- This method makes button text white when mouse hovers over the button
-  -------------------------------------------------------------------*/
+    This method makes button text red when mouse hovers over the flip button
+    -------------------------------------------------------------------*/
     public void mouseEntered(MouseEvent e){
         Object source=e.getSource();
         if(source==flipBut){
             flipBut.setForeground(Color.RED);
         }
     }
+    /*---------------------------------------------------------------------------
+    This method makes button text white when mouse isn't hovering over the button
+    ----------------------------------------------------------------------------*/
     public void mouseExited(MouseEvent e){
         Object source=e.getSource();
         if(source==flipBut){
@@ -519,9 +551,9 @@ class GameFrame extends JFrame implements ActionListener,MouseListener{
     public void mousePressed(MouseEvent e){}
 }
 /*---------------------------------------------------------------------------------------------------
-This class makes a bomb Object that has an Array of modules as an attribute
-The Bomb detects when the player clicks on a module, and then tells the module to handle interactions
-The Bomb also tells all its modules to draw themselves using methods in Modules class
+This class makes a Bomb Object which has an Array of Modules as an attribute.
+The Bomb detects when the player clicks on a module, and then tells the module to handle interactions.
+The Bomb also tells all its modules to draw themselves using methods in Modules class.
  ----------------------------------------------------------------------------------------------------*/
 class Bomb extends JPanel implements MouseListener{
     private String serial;                  //Serial code used for more complex defusing rules
@@ -532,7 +564,7 @@ class Bomb extends JPanel implements MouseListener{
     private int mouseX,mouseY,strikes;      //mouseX and mouseY are the mouse coordinates. strikes is how many mistakes the player has made. The game ends if strikes==3
     private Modules currentInteract;        //the module that is being interacted with right now
     private int[] allModules;
-    private Image back;
+    private Image back,strikePic;
     private TimeModule timer;
     /*-----------------------------------------------------------------------------------------------------
     This is the constructor of the bomb
@@ -546,6 +578,7 @@ class Bomb extends JPanel implements MouseListener{
         numBat=bat;
         numMod=modTypes.length;
         back=new ImageIcon("images/game back.png").getImage();
+        strikePic=new ImageIcon("images/strike.png").getImage();
         face=strikes=0;                                                                   //the front of the bomb is shown by default
         int[][] cornerCoord={{100,100},{100,300},{300,100},{500,100},{500,300}};          //each module box is drawn as a rectangle, so these are the rectangles' coordinates
 
@@ -563,8 +596,8 @@ class Bomb extends JPanel implements MouseListener{
                 minigames[i - 5][1] = new Modules(modTypes[i],cornerCoord[i-5][0],cornerCoord[i-5][1]);
             }
         }
-        int totalTime=1000;                                        //creating a timer
-        for(Modules[] mod:minigames){
+        int totalTime=1000;                                         //creating a timer
+        for(Modules[] mod:minigames){                               //Each module has a designated time to solve it. This method goes through all the modules and gets those time values
             if(mod[0]!=null){
                 totalTime+=mod[0].getAllottedTime();
             }
@@ -574,14 +607,20 @@ class Bomb extends JPanel implements MouseListener{
         }
         timer=new TimeModule(300,300,totalTime);
     }
+    /*------------------------------------------------------------------------------
+    This method is used by GameFrame to see how much time is left to defuse the Bomb
+     ------------------------------------------------------------------------------*/
     public int getTime(){
         return timer.getTime();
     }
+    /*----------------------------------------------------------------------------------
+    This method returns the Array of Integer constants that represent the Bomb's modules
+     ----------------------------------------------------------------------------------*/
     public int[] getModules(){
         return allModules;
     }
     /*--------------------------------------------------------
-    This method resets a bomb, enabling it to be played again
+    This method resets a bomb, enabling it to be played again.
      --------------------------------------------------------*/
     public void reset(){
         strikes=face=0;                                     //front face shown by default
@@ -637,6 +676,9 @@ class Bomb extends JPanel implements MouseListener{
             if(facingMod!=null) {
                 facingMod.draw(g);
             }
+        }
+        for(int i=0;i<strikes;i++){                         //drawing x's to represent number of strikes
+            g.drawImage(strikePic,310+60*i,310,this);
         }
     }
     /*------------------------------------------------------------------------------------------------------
@@ -1021,6 +1063,7 @@ class GameOverFrame extends JFrame implements ActionListener,MouseListener {
     private int levelIndex;                      //potentially necessary if we want return button to return player to select level page
     private JButton returnBut, playAgainBut;     //buttons that allow user to return to select level screen or play again
     private SelectLevelPage selectLevel;
+    private AudioClip buttonSound;
     /*---------------------------------------------------------------------------------------------------------------
     Constructor that makes the frame.
     "justPlayed" is the bomb that was completed, necessary because it's used to recreate the bomb if user plays again
@@ -1075,6 +1118,13 @@ class GameOverFrame extends JFrame implements ActionListener,MouseListener {
         thisPage.add(playAgainBut,JLayeredPane.DRAG_LAYER);
         thisPage.add(scoreLabel,JLayeredPane.DRAG_LAYER);
         add(thisPage);
+        try{
+            File buttonFile=new File("button click.wav");
+            buttonSound=Applet.newAudioClip(buttonFile.toURL());
+        }
+        catch(MalformedURLException e){
+            System.out.println("Can't find audio file");
+        }
         setVisible(true);
     }
 
@@ -1084,6 +1134,7 @@ class GameOverFrame extends JFrame implements ActionListener,MouseListener {
      *-------------------------------------------------------------------*/
     public void actionPerformed(ActionEvent evt) {
         Object source = evt.getSource();
+        buttonSound.play();
         if (source == returnBut) {
             setVisible(false);
             new MainGame(selectLevel);
@@ -1097,8 +1148,8 @@ class GameOverFrame extends JFrame implements ActionListener,MouseListener {
     }
 
     /*-------------------------------------------------------------------------------
-This method makes the button text black when mouse isn't hovering over the buttons
----------------------------------------------------------------------------------*/
+    This method makes the button text white when mouse isn't hovering over the buttons
+    ---------------------------------------------------------------------------------*/
     public void mouseExited(MouseEvent e) {
         Object source = e.getSource();
         if (source == playAgainBut) {
@@ -1110,7 +1161,7 @@ This method makes the button text black when mouse isn't hovering over the butto
     }
 
     /*-------------------------------------------------------------------
-    This method makes button text white when mouse hovers over the button
+    This method makes button text red when mouse hovers over the button
      -------------------------------------------------------------------*/
     public void mouseEntered(MouseEvent e) {
         Object source = e.getSource();
